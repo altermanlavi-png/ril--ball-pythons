@@ -277,15 +277,16 @@
   .lblwrap { flex: none; overflow: hidden; }
   .lbl { width: 70mm; height: 40mm; transform-origin: top left; background: #fff; color: #000; border: .3mm solid #000; border-radius: 2mm; padding: 2.2mm 2.6mm; display: flex; gap: 2.4mm; box-sizing: border-box; font-family: Heebo, Arial, sans-serif; direction: ltr; text-align: left; }
   .lbl .l-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
-  .lbl .l-top { display: flex; align-items: center; justify-content: space-between; gap: 2mm; border-bottom: .25mm solid #000; padding-bottom: 1.3mm; }
-  .lbl .l-logo { height: 8.5mm; width: auto; filter: invert(1); display: block; }
+  .lbl .l-top { display: flex; align-items: center; justify-content: flex-start; gap: 2mm; border-bottom: .25mm solid #000; padding-bottom: 1.3mm; }
+  .lbl .l-logo { width: 15mm; height: auto; filter: invert(1); display: block; }
   .lbl .l-id { font: 800 13pt/1 Heebo, Arial, sans-serif; letter-spacing: .02em; white-space: nowrap; }
   .lbl .l-sex { font-weight: 700; margin-left: 1mm; }
   .lbl .l-body { flex: 1; padding-top: 1.4mm; overflow: hidden; }
   .lbl .l-genes { font: 700 8pt/1.25 Heebo, Arial, sans-serif; }
   .lbl .l-morph { font: 600 7pt/1.25 Heebo, Arial, sans-serif; margin-top: .8mm; }
   .lbl .l-meta { font: 500 6.8pt/1.35 Heebo, Arial, sans-serif; }
-  .lbl .l-qr { width: 21mm; flex: none; align-self: center; }
+  .lbl .l-side { width: 20mm; flex: none; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 1.6mm; }
+  .lbl .l-qr { width: 20mm; }
   .lbl .l-qr svg { width: 100%; height: auto; display: block; }
   .lblprev { background: #fff; border-radius: 12px; padding: 14px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; overflow-x: auto; }
   .lopts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin: 14px 0; }
@@ -4063,12 +4064,12 @@ var qrcode = function() {
     if (o.weight && s.weight) meta.push(s.weight + ' g');
     var par = o.parents && (sire || dam) ? 'Sire ' + esc(sire || '?') + ' · Dam ' + esc(dam || '?') : '';
     return '<div class="lblwrap" style="width:' + size[1] + 'mm;height:' + size[2] + 'mm"><div class="lbl" style="transform:scale(' + k.toFixed(4) + ')">' +
-      '<div class="l-main"><div class="l-top">' + (o.logo ? '<img class="l-logo" src="' + LOGO + '" alt="">' : '<span></span>') +
+      '<div class="l-main"><div class="l-top">' +
       '<span class="l-id">' + esc(s.code) + (o.sex && sexSym(s.sex) ? '<span class="l-sex">' + sexSym(s.sex) + '</span>' : '') + '</span></div>' +
       '<div class="l-body">' + (o.genes && (s.genes || []).length ? '<div class="l-genes">' + esc((s.genes || []).join(' × ')) + '</div>' : '') +
       (o.morph && mn.length ? '<div class="l-morph">= ' + esc(mn.join(', ')) + '</div>' : '') + '</div>' +
       '<div class="l-meta">' + (meta.length ? '<div>' + esc(meta.join(' · ')) + '</div>' : '') + (par ? '<div>' + par + '</div>' : '') + '</div></div>' +
-      (o.qr ? '<div class="l-qr">' + labelQr(s) + '</div>' : '') + '</div></div>';
+      (o.qr || o.logo ? '<div class="l-side">' + (o.qr ? '<div class="l-qr">' + labelQr(s) + '</div>' : '') + (o.logo ? '<img class="l-logo" src="' + LOGO + '" alt="">' : '') + '</div>' : '') + '</div></div>';
   }
   function labelSheetHtml() {
     var ids = (ui.sheet.ids || []).filter(function (id) { return snakeById(id); }), o = labelOpts();
