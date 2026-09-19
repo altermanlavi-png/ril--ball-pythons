@@ -2675,6 +2675,7 @@ var qrcode = function() {
     d.events = Array.isArray(d.events) ? d.events : [];
     d.pairs = Array.isArray(d.pairs) ? d.pairs : [];
     d.created = d.created || todayISO();
+    d.remindFeed = d.remindFeed !== false;
     return normDb(d);
   }
   // calculator data: separate gene lists for the male and the female (older row format is converted)
@@ -2697,6 +2698,7 @@ var qrcode = function() {
   function fixPied(list) { return Array.isArray(list) ? list.map(function (g) { if (typeof g === 'string') return g.replace(/\bPied\b/, 'Piebald'); if (g && typeof g.name === 'string') g.name = g.name.replace(/\bPied\b/, 'Piebald'); return g; }) : list; }
   function normDb(d) {
     d.snakes = Array.isArray(d.snakes) ? d.snakes : [];
+    d.remindFeed = d.remindFeed !== false;
     d.snakes.forEach(function (s) { if (s) s.genes = fixPied(s.genes); });
     d.customGenes = fixPied(d.customGenes); d.draftGenes = fixPied(d.draftGenes);
     if (d.calc) { d.calc.male = fixPied(d.calc.male); d.calc.female = fixPied(d.calc.female); }
@@ -2728,7 +2730,7 @@ var qrcode = function() {
     });
     db.pairs.forEach(function (p) { docs['pairs/' + p.id] = p; });
     (db.events || []).forEach(function (e) { docs['events/' + e.id] = e; });
-    docs['meta/app'] = { customGenes: db.customGenes, draftGenes: db.draftGenes, calc: db.calc, labelOpts: db.labelOpts || {}, lastBackup: db.lastBackup || '', snoozeUntil: db.snoozeUntil || '', created: db.created || '' };
+    docs['meta/app'] = { remindFeed: db.remindFeed !== false, customGenes: db.customGenes, draftGenes: db.draftGenes, calc: db.calc, labelOpts: db.labelOpts || {}, lastBackup: db.lastBackup || '', snoozeUntil: db.snoozeUntil || '', created: db.created || '' };
     return docs;
   }
   // one place that knows where a document lives: Claude's database keeps folders, Firebase keeps one flat 'team' collection
@@ -2775,7 +2777,7 @@ var qrcode = function() {
     var nd = {
       snakes: snakes.docs.map(function (x) { var s = body(x), ph = (byS[s.id] || []).filter(Boolean); s.photos = ph; s.photo = ph[0] || ''; delete s.photoCount; return s; }),
       pairs: pairs.docs.map(body), events: events.docs.map(body),
-      customGenes: m.customGenes, draftGenes: m.draftGenes, calc: m.calc, labelOpts: m.labelOpts, lastBackup: m.lastBackup, snoozeUntil: m.snoozeUntil, created: m.created
+      remindFeed: m.remindFeed, customGenes: m.customGenes, draftGenes: m.draftGenes, calc: m.calc, labelOpts: m.labelOpts, lastBackup: m.lastBackup, snoozeUntil: m.snoozeUntil, created: m.created
     };
     if (db.snakes.length) { try { localStorage.setItem(KEY + '-before-cloud', JSON.stringify(db)); } catch (e) {} } // safety copy of what this device had
     db = normDb(nd);
@@ -2930,6 +2932,15 @@ var qrcode = function() {
     if (!lf) return { k: 'none', label: 'אין תיעוד', d: null };
     var d = daysSince(lf.date);
     return { k: d < every ? 'ok' : d < 2 * every ? 'due' : 'late', label: rel(d), d: d };
+  }
+  // snakes whose next feeding falls tomorrow (the reminder the day before)
+  function dueTomorrow() {
+    return db.snakes.filter(function (s) {
+      if (s.status === 'sold') return false;
+      var lf = lastFeed(s); if (!lf) return false;
+      var every = Number(s.feedEvery) > 0 ? Number(s.feedEvery) : 7;
+      return daysSince(lf.date) === every - 1;
+    });
   }
   function sexSym(x) { return x === 'male' ? '♂' : x === 'female' ? '♀' : ''; }
   function statusLabel(k) { var s = STATUSES.find(function (x) { return x[0] === k; }); return s && s[0] ? s[1] : ''; }
@@ -3189,7 +3200,9 @@ var qrcode = function() {
     var s = db.snakes, due = s.filter(function (x) { return feedState(x).k !== 'ok'; }).length, nx = nextEvent();
     var status = !s.length ? '<button class="hstatus" type="button" data-act="add">האוסף ריק · הוסיפו את הנחש הראשון</button>'
       : '<button class="hstatus" type="button" data-act="gofeed">' + (due ? due + (due === 1 ? ' נחש ממתין' : ' נחשים ממתינים') + ' להאכלה' : 'הכול מעודכן') + '</button>';
-    return '<div class="homehero"><p class="welcome">ברוכים הבאים ל</p><img class="logo" src="' + LOGO + '" alt="RIL Ball Pythons">' + status +
+    var tm = db.remindFeed !== false ? dueTomorrow() : [];
+    var remind = tm.length ? '<button class="hnext" type="button" data-act="gofeed">מחר האכלה: ' + esc(tm.slice(0, 4).map(sname).join(', ')) + (tm.length > 4 ? ' ועוד ' + (tm.length - 4) : '') + '</button>' : '';
+    return '<div class="homehero"><p class="welcome">ברוכים הבאים ל</p><img class="logo" src="' + LOGO + '" alt="RIL Ball Pythons">' + status + remind +
       (nx ? '<button class="hnext" type="button" data-act="opennext" data-date="' + nx.date + '">' + esc(nx.text) + '</button>' : '') +
       '<div class="hactions"><button class="hbtn primary" type="button" data-act="add">+ נחש</button>' +
       '<button class="hbtn" type="button" data-act="gofeedmode">✓ האכלה</button><button class="hbtn" type="button" data-act="gocal">יומן</button></div></div>';
@@ -3202,6 +3215,10 @@ var qrcode = function() {
 
   function profileView() {
     var h = head('פרופיל', cloud.fb ? 'החשבון שלך' : '', '');
+    h += '<div class="section"><div class="section-head"><h2 class="section-title">תזכורות</h2></div>' +
+      '<label class="tgl"><input type="checkbox" id="remindTgl"' + (db.remindFeed !== false ? ' checked' : '') + '> תזכורת יום לפני האכלה (במסך הבית)</label>' +
+      '<p class="hint" style="margin:8px 0 10px">כדי לקבל התראה גם כשהאפליקציה סגורה, אפשר לייצא את מועדי ההאכלה ליומן הטלפון. ביומן תופיע התראה יום לפני כל האכלה.</p>' +
+      '<div class="row"><button class="btn btn-soft" type="button" data-act="icsfeed">ייצוא תזכורות האכלה ליומן (.ics)</button></div></div>';
     if (cloud.fb) {
       h += '<div class="section"><div class="section-head"><h2 class="section-title">החשבון</h2></div>' +
         '<div class="spec-row"><span>מייל</span><span dir="ltr">' + esc(cloud.email || '') + '</span></div>' +
@@ -4017,6 +4034,25 @@ var qrcode = function() {
     return L.join('\r\n');
   }
 
+  // one repeating all-day event per snake at its next feeding, with an alarm at 09:00 the day before
+  function icsFeedText() {
+    var t = todayISO(), stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+    var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//RIL-BALL-PYTHONS//HE', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:RIL Ball Pythons - האכלות'];
+    db.snakes.forEach(function (s) {
+      if (s.status === 'sold') return;
+      var lf = lastFeed(s); if (!lf) return;
+      var every = Number(s.feedEvery) > 0 ? Number(s.feedEvery) : 7;
+      var due = addDaysISO(lf.date, every); if (due < t) due = t;
+      L.push('BEGIN:VEVENT', 'UID:feed-' + s.id + '@ril-ball-pythons', 'DTSTAMP:' + stamp,
+        'DTSTART;VALUE=DATE:' + due.replace(/-/g, ''), 'DTEND;VALUE=DATE:' + addDaysISO(due, 1).replace(/-/g, ''),
+        'RRULE:FREQ=DAILY;INTERVAL=' + every, 'SUMMARY:' + icsEsc('האכלה: ' + sname(s)),
+        'DESCRIPTION:' + icsEsc('האכלה כל ' + every + ' ימים'),
+        'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEsc('מחר האכלה: ' + sname(s)), 'TRIGGER:-PT15H', 'END:VALARM', 'END:VEVENT');
+    });
+    L.push('END:VCALENDAR');
+    return L.join('\r\n');
+  }
+
   /* ---------- sales, backup reminder ---------- */
   function salesHtml() {
     var sold = db.snakes.filter(function (s) { return s.status === 'sold'; });
@@ -4211,6 +4247,7 @@ var qrcode = function() {
       case 'sharecard': openSheet({ type: 'share', id: id }); break;
       case 'copyshare': copyShare(id); break;
       case 'pngshare': shareImage(id); break;
+      case 'icsfeed': downloadFile('ril-feeding-reminders.ics', icsFeedText(), 'text/calendar'); break;
       case 'ics': downloadFile('lavi-snakes-calendar.ics', icsText(), 'text/calendar'); break;
       case 'snoozebackup': db.snoozeUntil = addDaysISO(todayISO(), 1); save(); renderPage(); break;
       case 'loadsnakes': loadFromSnakes(); break;
@@ -4265,6 +4302,7 @@ var qrcode = function() {
     if (t.name === 'status' && t.form && t.form.id === 'snakeForm') { refreshPriceGroup(t.value); return; }
     if (t.dataset && t.dataset.lopt) { var lo = labelOpts(); lo[t.dataset.lopt] = t.type === 'checkbox' ? t.checked : (t.dataset.lopt === 'size' ? Number(t.value) : t.value); save(); refreshLabelPreview(); return; }
     if (t.id === 'detailTgl') { db.calc.detail = t.checked; save(); calcRefresh(); return; }
+    if (t.id === 'remindTgl') { db.remindFeed = t.checked; save(); toast(t.checked ? 'התזכורת פעילה' : 'התזכורת כבויה'); return; }
     if (t.dataset && t.dataset.gname != null) { db.calc.modes[t.dataset.gname] = t.value; save(); calcRefresh(); }
   });
   document.addEventListener('submit', function (e) {
