@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>RIL_BALL_PYTHONS</title>
-<style>html,body{background:#000}</style><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RIL_BALL_PYTHONS"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><style id="nl-badge-fix">@media (max-width:700px){.nav{bottom:62px}.app{padding-bottom:calc(160px + env(safe-area-inset-bottom))}.selbar{bottom:calc(130px + env(safe-area-inset-bottom))}}</style>
+<style>html{background:#000}</style><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RIL_BALL_PYTHONS"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><style id="nl-badge-fix">@media (max-width:700px){.nav{bottom:62px}.app{padding-bottom:calc(160px + env(safe-area-inset-bottom))}.selbar{bottom:calc(130px + env(safe-area-inset-bottom))}}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,9 +24,12 @@
     --sans: 'Heebo', -apple-system, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
   }  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; direction: rtl; }
-  body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--logo) center 40% / min(96vw, 780px) auto no-repeat; filter: blur(11px); opacity: .26; }
+  body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--logo) center 45% / min(125vw, 820px) auto no-repeat; filter: blur(9px); opacity: .42; }
+  /* cards inside the page are glass, so the blurred logo shows through them; sheets and the nav stay solid */
+  .app { --surface: rgba(14,14,14,.62); --surface2: rgba(24,24,24,.62); }
   body.home::before { display: none; }
-  body { background: var(--bg); color: var(--text); font: 400 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+  html { background: var(--bg); }
+  body { background: transparent; color: var(--text); font: 400 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
   h1, h2, h3, p { margin: 0; }
   button, input, select, textarea { font: inherit; color: inherit; }
   button { cursor: pointer; }
@@ -256,7 +259,8 @@
   .lsug-item:hover { background: var(--accent-soft); }
 
   /* home: black splash with the logo */
-  body.home { background: #000; color: #fff; }
+  html:has(body.home) { background: #000; }
+  body.home { background: transparent; color: #fff; }
   .homehero { min-height: calc(100vh - 150px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding-block: 24px; }
   .welcome { font: 700 1.55rem/1.2 var(--serif); color: #fff; letter-spacing: .02em; }
   .logo { width: min(88%, 480px); height: auto; display: block; }
