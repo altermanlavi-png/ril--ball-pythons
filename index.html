@@ -2655,7 +2655,7 @@ var qrcode = function() {
     { id: 'mahogany', label: 'Mahogany / Cinder', mode: 'codom', genes: ['Mahogany', 'Cinder'] },
     { id: 'spider', label: 'Spider', mode: 'codom', genes: ['Spider', 'Champagne', 'Black Head', 'Chocolate', 'Cypress', 'Hidden Gene Woma', 'Woma', 'Spotnose', 'Wookie', 'Bongo'], combos: { 'Black Head+Spider': 'Black Head Spider' } },
     { id: 'albino', label: 'Albino', mode: 'recessive', genes: ['Albino', 'Candy'], combos: { 'Albino+Candy': 'Candy Albino' } },
-    { id: 'clown', label: 'Clown', mode: 'recessive', genes: ['Clown', 'Cryptic'] }
+    { id: 'clown', label: 'Clown', mode: 'recessive', genes: ['Clown', 'Cryptic'], combos: { 'Clown+Cryptic': 'Crypton' } }
   ];
   // named combinations that are really two alleles: typing one adds both
   var COMBO_EXPAND = { 'highway': ['Gravel', 'Yellow Belly'], 'super stripe': ['Specter', 'Yellow Belly'] };
@@ -3553,6 +3553,7 @@ var qrcode = function() {
     var all = res.map(function (r) { return r.label; }).join(' ');
     var notes = '';
     if (/\d+% Het/.test(all)) notes += '<p class="note">"66% Het" = מבין הצאצאים שנראים רגילים, לשניים מכל שלושה יש את הגן. אי אפשר להבחין ביניהם בעין. לפירוט מלא סמנו "פירוט גנוטיפ".</p>';
+    if (/% Het [^×]+ \/ \d+% Het/.test(all)) notes += '<p class="note">"33% Het Clown / 33% Het Cryptic" = שני הגנים אלליים (יושבים על אותו מקום בגנום), ולכן צאצא שנראה רגיל נושא לכל היותר אחד מהם: שליש נושאים את הראשון, שליש את השני ושליש אף אחד. צאצא שקיבל את שניהם הוא ויזואלי (למשל Crypton) ומופיע בשורה נפרדת.</p>';
     if (/\(allelic\)|\([^)]* × [^)]*\)/.test(all)) notes += '<p class="note">גנים אללים יושבים על אותו מקום בגנום: צאצא שמקבל אלל אחד מכל הורה מקבל צירוף אללי (למשל Highway = Gravel × Yellow Belly), וייתכן ששניים כאלה מתנהגים כמו "Super".</p>';
     if (res.warn && res.warn.length) notes += '<p class="note" style="color:var(--red)">יש יותר משני עותקים על אותו מקום בגנום אצל: ' + res.warn.map(esc).join(', ') + '. לכל הורה יש רק שני עותקים, ולכן נספרו רק הראשונים.</p>';
     if (/Champagne × Spider|Spider × Champagne|Super Spider|Super Champagne/.test(all)) notes += '<p class="note" style="color:var(--red)">Super Spider, Super Champagne וצירוף Spider × Champagne מדווחים כקטלניים: צאצאים כאלה בדרך כלל אינם שורדים.</p>';
