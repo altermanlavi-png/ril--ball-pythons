@@ -8,7 +8,7 @@
 <style>html{background:#000}</style><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RIL_BALL_PYTHONS"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=Heebo:wght@400;500;600;700&family=Rubik:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: dark;
@@ -213,8 +213,24 @@
   .ag .when { color: var(--dim); font-size: .78rem; flex: none; align-self: center; }
 
   /* v3 */
-  .pair-card { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: start; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+  .pair-card { display: flex; flex-direction: column; gap: 12px; width: 100%; text-align: start; background: var(--surface); border: 1px solid rgba(255,255,255,.07); border-radius: 22px; padding: 16px; font-family: 'Rubik', var(--sans); font-weight: 400; transition: transform .15s ease, border-color .15s ease; }
+  .pair-card:active { transform: scale(.985); border-color: rgba(255,255,255,.16); }
   .pair-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .pair-top b { font-weight: 500; font-size: 1.1rem; letter-spacing: .02em; direction: ltr; unicode-bidi: isolate; }
+  /* the two parents, male on the left under the male ID */
+  .pair-sides { display: flex; align-items: stretch; gap: 6px; direction: ltr; }
+  .pair-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; background: var(--surface2); border-radius: 16px; padding: 10px; text-align: left; }
+  .pair-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .pair-side .avatar { width: 42px; height: 42px; border-radius: 12px; font: 500 1rem 'Rubik', var(--sans); }
+  .pair-code { font-weight: 500; font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pair-code i { font-style: normal; color: var(--muted); }
+  .pair-genes { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pair-genes .gchip { font-size: .72rem; font-weight: 400; padding: 2px 8px; white-space: normal; flex: 0 1 auto; }
+  .pair-genes .gchip.normal { background: none; border: 1px solid var(--line); color: var(--muted); }
+  .pair-side .morph { margin-top: 0; font-weight: 500; font-size: .74rem; }
+  .pair-side .note { direction: rtl; text-align: right; }
+  .pair-x { align-self: center; color: var(--dim); font-size: .95rem; flex: none; }
+  .pair-card .stage, .pair-card .note { font-weight: 400; }
   .progress { display: flex; gap: 4px; }
   .progress span { flex: 1; height: 5px; border-radius: 9px; background: var(--surface2); }
   .progress span.on { background: var(--accent); }
@@ -3801,10 +3817,21 @@ var qrcode = function() {
   }
   // typical ball python incubation is about 55-60 days; editable per pairing
   function expectedHatch(p) { if (!p.laid || p.hatched || p.failed) return ''; return addDaysISO(p.laid, Number(p.incubation) > 0 ? Number(p.incubation) : 58); }
+  // one parent on a pairing card: photo, ID and genetics, so the list shows what is being paired
+  function pairSideHtml(s, sex) {
+    if (!s) return '<span class="pair-side"><span class="pair-who"><span class="avatar">?</span><span class="pair-code">' + sexSym(sex) + '</span></span><span class="note">הנחש נמחק</span></span>';
+    var g = s.genes || [], mn = morphNames(g);
+    return '<span class="pair-side"><span class="pair-who">' +
+      (s.photo ? '<img class="avatar" src="' + s.photo + '" alt="">' : '<span class="avatar">' + initial(s) + '</span>') +
+      '<span class="pair-code">' + esc(sname(s)) + ' <i>' + sexSym(sex) + '</i></span></span>' +
+      '<span class="pair-genes">' + (g.length ? g.map(function (x) { return '<span class="gchip">' + esc(x) + '</span>'; }).join('') : '<span class="gchip normal">Normal</span>') + '</span>' +
+      (mn.length ? '<span class="morph">= ' + esc(mn.join(', ')) + '</span>' : '') + '</span>';
+  }
   function pairCardHtml(p) {
     var st = pairStage(p), eh = expectedHatch(p), left = eh ? -daysSince(eh) : 0;
     return '<button type="button" class="pair-card" data-act="openpair" data-id="' + p.id + '">' +
       '<span class="pair-top"><b>' + esc(pairName(p)) + '</b>' + (p.season ? '<span class="note">' + esc(p.season) + '</span>' : '') + '</span>' +
+      '<span class="pair-sides">' + pairSideHtml(snakeById(p.maleId), 'male') + '<span class="pair-x">×</span>' + pairSideHtml(snakeById(p.femaleId), 'female') + '</span>' +
       '<span class="progress">' + PAIR_STEPS.map(function (_, i) { return '<span class="' + (st.i >= i ? 'on' : '') + '"></span>'; }).join('') + '</span>' +
       '<span class="stage ' + st.css + '">' + esc(st.label + (st.date ? ' · ' + fmtDate(st.date) : '')) + '</span>' +
       (eh ? '<span class="note">צפי בקיעה: ' + fmtDate(eh) + (left >= 0 ? ' · בעוד ' + left + ' ימים' : ' · עבר לפני ' + (-left) + ' ימים') + '</span>' : '') +
