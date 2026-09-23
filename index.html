@@ -287,6 +287,9 @@
   .lbl .l-sex { font-weight: 700; margin-left: 1mm; }
   .lbl .l-body { flex: 1; padding-top: 1.4mm; overflow: hidden; }
   .lbl .l-genes { font: 700 8pt/1.25 Heebo, Arial, sans-serif; }
+  .lbl .l-par { font: 600 7pt/1.25 Heebo, Arial, sans-serif; margin-bottom: .9mm; }
+  .lbl .l-par b { font-weight: 800; font-size: 7.6pt; }
+  .lbl .l-par .l-morph { margin-top: .2mm; font-size: 6.6pt; }
   .lbl .l-morph { font: 600 7pt/1.25 Heebo, Arial, sans-serif; margin-top: .8mm; }
   .lbl .l-meta { font: 500 6.8pt/1.35 Heebo, Arial, sans-serif; }
   .lbl .l-side { width: 19mm; flex: none; align-self: center; display: flex; flex-direction: column; align-items: stretch; gap: 1.4mm; }
@@ -3679,6 +3682,7 @@ var qrcode = function() {
     else if (ui.sheet.type === 'event') sh.innerHTML = eventFormHtml();
     else if (ui.sheet.type === 'pair') sh.innerHTML = pairFormHtml();
     else if (ui.sheet.type === 'label') sh.innerHTML = labelSheetHtml();
+    else if (ui.sheet.type === 'pairlabel') { if (!pairOf(ui.sheet.pid)) return closeSheet(); sh.innerHTML = pairLabelSheetHtml(); }
     else if (ui.sheet.type === 'share') { if (!s) return closeSheet(); sh.innerHTML = shareHtml(s); }
     else sh.innerHTML = snakeFormHtml();
   }
@@ -3826,7 +3830,8 @@ var qrcode = function() {
       var eh = expectedHatch(p);
       h += '<div class="section"><h3 class="section-title" style="margin-bottom:8px">פעולות</h3>' +
         (eh ? '<p class="note" style="margin-bottom:8px">צפי בקיעה: ' + fmtDate(eh) + '</p>' : '') +
-        '<button class="btn btn-soft wide" type="button" data-act="pair2calc" data-id="' + p.id + '">פתיחה במחשבון גנטיקה</button>' +
+        '<button class="btn btn-primary wide" type="button" data-act="pairlabel" data-id="' + p.id + '">תווית לקופסת הטלה</button>' +
+        '<button class="btn btn-soft wide" type="button" data-act="pair2calc" data-id="' + p.id + '" style="margin-top:10px">פתיחה במחשבון גנטיקה</button>' +
         '<div class="row" style="margin-top:10px"><label class="field" style="margin:0;flex:1">מספר צאצאים ליצירה<input type="number" id="kidsN" min="1" max="40" inputmode="numeric" value="' + (p.eggs || '') + '"></label>' +
         '<button class="btn btn-primary" type="button" data-act="makekids" data-id="' + p.id + '" style="align-self:flex-end;flex:none">יצירת צאצאים</button></div>' +
         (p.kidsMade ? '<p class="hint" style="margin-top:6px">נוצרו כבר ' + p.kidsMade + ' כרטיסי צאצאים מהזיווג הזה.</p>' : '') +
@@ -4126,10 +4131,60 @@ var qrcode = function() {
   }
   function refreshLabelPreview() {
     var box = document.getElementById('lblPreview'); if (!box || !ui.sheet) return;
+    if (ui.sheet.type === 'pairlabel') { var p = pairOf(ui.sheet.pid); if (p) box.innerHTML = pairLabelHtml(p, labelOpts()); return; }
     box.innerHTML = labelPreviewInner((ui.sheet.ids || []).filter(function (id) { return snakeById(id); }), labelOpts());
   }
+
+  /* ---------- clutch box label (both parents' genetics) ---------- */
+  var PAIR_LABEL_FIELDS = [['logo', 'לוגו'], ['genes', 'גנטיקה'], ['morph', 'שם מורף'], ['dates', 'תאריכים'], ['eggs', 'מספר ביצים'], ['qr', 'קוד QR']];
+  function pairLabelQr(p) {
+    try {
+      var m = snakeById(p.maleId), f = snakeById(p.femaleId), eh = expectedHatch(p);
+      var lines = ['Clutch' + (p.season ? ' ' + p.season : ''), 'Male: ' + (m ? (m.code || '') + ' ' + (m.genes || []).join(' x ') : '?'), 'Female: ' + (f ? (f.code || '') + ' ' + (f.genes || []).join(' x ') : '?'),
+        p.laid ? 'Laid ' + p.laid : '', p.eggs ? 'Eggs ' + p.eggs : '', eh ? 'Due ' + eh : ''].filter(Boolean);
+      var q = qrcode(0, 'M'); q.addData(lines.join('\n')); q.make();
+      return q.createSvgTag({ scalable: true, margin: 0 });
+    } catch (e) { return ''; }
+  }
+  function pairLabelHtml(p, o) {
+    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], k = size[1] / 70, eh = expectedHatch(p);
+    function parent(s, sym) {
+      var g = s ? s.genes || [] : [], mn = s ? morphNames(g) : [];
+      var txt = o.genes && g.length ? g.join(' × ') : (o.genes && s ? 'Normal' : '');
+      return '<div class="l-par"><b>' + sym + ' ' + esc(s ? sname(s) : '?') + '</b>' + (txt ? ' ' + esc(txt) : '') +
+        (o.morph && mn.length ? '<div class="l-morph">= ' + esc(mn.join(', ')) + '</div>' : '') + '</div>';
+    }
+    var meta = [];
+    if (o.dates && p.laid) meta.push('Laid ' + fmtDate(p.laid));
+    if (o.eggs && p.eggs) meta.push(p.eggs + ' eggs');
+    if (o.dates && eh) meta.push('Due ' + fmtDate(eh));
+    return '<div class="lblwrap" style="width:' + size[1] + 'mm;height:' + size[2] + 'mm"><div class="lbl" style="transform:scale(' + k.toFixed(4) + ')">' +
+      '<div class="l-main"><div class="l-top"><span class="l-id">CLUTCH' + (p.season ? ' ' + esc(p.season) : '') + '</span></div>' +
+      '<div class="l-body">' + parent(snakeById(p.maleId), '♂') + parent(snakeById(p.femaleId), '♀') + '</div>' +
+      '<div class="l-meta">' + (meta.length ? '<div>' + esc(meta.join(' · ')) + '</div>' : '') + '</div></div>' +
+      (o.qr || o.logo ? '<div class="l-side">' + (o.qr ? '<div class="l-qr">' + pairLabelQr(p) + '</div>' : '') + (o.logo ? '<img class="l-logo" src="' + LOGO + '" alt="">' : '') + '</div>' : '') + '</div></div>';
+  }
+  function pairLabelSheetHtml() {
+    var p = pairOf(ui.sheet.pid), o = labelOpts();
+    if (o.dates == null) o.dates = true;
+    if (o.eggs == null) o.eggs = true;
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="openpair" data-id="' + p.id + '" aria-label="חזרה">✕</button></div>' +
+      '<h2 class="sheet-title">תווית לקופסת הטלה</h2>' +
+      '<div class="lblprev" id="lblPreview">' + pairLabelHtml(p, o) + '</div>' +
+      '<label class="field" style="margin-top:14px">גודל התווית<select data-lopt="size">' + LABEL_SIZES.map(function (z, i) { return '<option value="' + i + '"' + (o.size === i ? ' selected' : '') + '>' + z[0] + '</option>'; }).join('') + '</select></label>' +
+      '<div class="lopts">' + PAIR_LABEL_FIELDS.map(function (x) { return '<label><input type="checkbox" data-lopt="' + x[0] + '"' + (o[x[0]] ? ' checked' : '') + '>' + x[1] + '</label>'; }).join('') + '</div>' +
+      '<button class="btn btn-primary wide" type="button" data-act="printlabels">הדפסה</button>' +
+      '<p class="hint" style="margin-top:8px">מדביקים על קופסת ההטלה / האינקובטור. בחלון ההדפסה אפשר לבחור "שמירה כ-PDF".</p>';
+  }
   function printLabels() {
-    var ids = (ui.sheet && ui.sheet.ids || []).filter(function (id) { return snakeById(id); }), o = labelOpts(), pa = document.getElementById('printArea');
+    var pa = document.getElementById('printArea');
+    if (ui.sheet && ui.sheet.type === 'pairlabel') {
+      var p = pairOf(ui.sheet.pid); if (!p || !pa) return;
+      pa.innerHTML = pairLabelHtml(p, labelOpts());
+      try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
+      return;
+    }
+    var ids = (ui.sheet && ui.sheet.ids || []).filter(function (id) { return snakeById(id); }), o = labelOpts();
     if (!ids.length || !pa) return;
     pa.innerHTML = ids.map(function (id) { return labelHtml(snakeById(id), o); }).join('');
     try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
@@ -4247,6 +4302,7 @@ var qrcode = function() {
       case 'delpair': if (confirm('למחוק את הזיווג?')) { db.pairs = db.pairs.filter(function (x) { return x.id !== id; }); save(); closeSheet(); renderPage(); toast('הזיווג נמחק'); } break;
       case 'pairfail': var pp = pairOf(id); if (pp) { pp.failed = !pp.failed; save(); renderSheet(); renderPage(); } break;
       case 'pair2calc': pairToCalc(id); break;
+      case 'pairlabel': openSheet({ type: 'pairlabel', pid: id }); break;
       case 'makekids': makeKids(id); break;
       case 'sharecard': openSheet({ type: 'share', id: id }); break;
       case 'copyshare': copyShare(id); break;
