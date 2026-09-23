@@ -3550,7 +3550,12 @@ var qrcode = function() {
       combos = next;
     });
     var out = {};
-    combos.forEach(function (c) { var k = c.parts.length ? c.parts.join(' × ') : 'Normal'; out[k] = (out[k] || 0) + c.p; });
+    // visual genes first, hets (Het / 66% Het / 50% Het) at the end
+    function isHet(x) { return /^(\d+% )?Het /.test(x); }
+    combos.forEach(function (c) {
+      var parts = c.parts.filter(function (x) { return !isHet(x); }).concat(c.parts.filter(isHet));
+      var k = parts.length ? parts.join(' × ') : 'Normal'; out[k] = (out[k] || 0) + c.p;
+    });
     var res = Object.keys(out).map(function (k) { return { label: k, p: out[k] }; }).filter(function (r) { return r.p > 0.0001; }).sort(function (x, y) { return y.p - x.p; });
     res.warn = warn;
     return res;
