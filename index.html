@@ -3514,8 +3514,15 @@ var qrcode = function() {
           else { non += pr; if (w === 1) { var al = ab[0] === '~' ? ab[1] : ab[0]; carry[al] = (carry[al] || 0) + pr; } }
         });
         Object.keys(vis).forEach(function (lab) { outs.push({ p: vis[lab], lab: lab }); });
-        if (non > 1e-12) {
-          outs.push({ p: non, lab: Object.keys(carry).map(function (al) {
+        var carriers = Object.keys(carry);
+        if (carriers.length > 1) {
+          // two different alleles of one complex (e.g. Het Clown × Het Cryptic): a normal-looking baby carries at most one,
+          // so each possibility gets its own row (Het Clown / Het Cryptic / normal) instead of "33% Het Clown / 33% Het Cryptic"
+          var carried = 0;
+          carriers.forEach(function (al) { carried += carry[al]; outs.push({ p: carry[al], lab: 'Het ' + disp(al) }); });
+          if (non - carried > 1e-12) outs.push({ p: non - carried, lab: '' });
+        } else if (non > 1e-12) {
+          outs.push({ p: non, lab: carriers.map(function (al) {
             var ph = carry[al] / non;
             return (ph > 1 - 1e-9 ? '100' : Math.floor(ph * 100 + 1e-9)) + '% Het ' + disp(al);
           }).join(' / ') });
@@ -3552,9 +3559,7 @@ var qrcode = function() {
     if (!res.length) return '<div class="panel"><p class="note">מלאו את הגנטיקה של הזכר ושל הנקבה כדי לראות את התוצאות האפשריות.</p></div>';
     var all = res.map(function (r) { return r.label; }).join(' ');
     var notes = '';
-    if (/\d+% Het/.test(all)) notes += '<p class="note">"66% Het" = מבין הצאצאים שנראים רגילים, לשניים מכל שלושה יש את הגן. אי אפשר להבחין ביניהם בעין. לפירוט מלא סמנו "פירוט גנוטיפ".</p>';
-    if (/% Het [^×]+ \/ \d+% Het/.test(all)) notes += '<p class="note">"33% Het Clown / 33% Het Cryptic" = שני הגנים אלליים (יושבים על אותו מקום בגנום), ולכן צאצא שנראה רגיל נושא לכל היותר אחד מהם: שליש נושאים את הראשון, שליש את השני ושליש אף אחד. צאצא שקיבל את שניהם הוא ויזואלי (למשל Crypton) ומופיע בשורה נפרדת.</p>';
-    if (/\(allelic\)|\([^)]* × [^)]*\)/.test(all)) notes += '<p class="note">גנים אללים יושבים על אותו מקום בגנום: צאצא שמקבל אלל אחד מכל הורה מקבל צירוף אללי (למשל Highway = Gravel × Yellow Belly), וייתכן ששניים כאלה מתנהגים כמו "Super".</p>';
+    if (/\d+% Het/.test(all)) notes += '<p class="note">"66% Het" = מבין הצאצאים שנראים רגילים, לשניים מכל שלושה יש את הגן. אי אפשר להבחין ביניהם בעין. לפירוט מלא סמנו "פירוט גנוטיפ".</p>';    if (/\(allelic\)|\([^)]* × [^)]*\)/.test(all)) notes += '<p class="note">גנים אללים יושבים על אותו מקום בגנום: צאצא שמקבל אלל אחד מכל הורה מקבל צירוף אללי (למשל Highway = Gravel × Yellow Belly), וייתכן ששניים כאלה מתנהגים כמו "Super".</p>';
     if (res.warn && res.warn.length) notes += '<p class="note" style="color:var(--red)">יש יותר משני עותקים על אותו מקום בגנום אצל: ' + res.warn.map(esc).join(', ') + '. לכל הורה יש רק שני עותקים, ולכן נספרו רק הראשונים.</p>';
     if (/Champagne × Spider|Spider × Champagne|Super Spider|Super Champagne/.test(all)) notes += '<p class="note" style="color:var(--red)">Super Spider, Super Champagne וצירוף Spider × Champagne מדווחים כקטלניים: צאצאים כאלה בדרך כלל אינם שורדים.</p>';
     if (/\((Blue Eyed Leucistic|Ivory|Scaleless)\)/.test(all)) notes += '<p class="note">השם המקובל של צורת ה-Super מופיע בסוגריים.</p>';
