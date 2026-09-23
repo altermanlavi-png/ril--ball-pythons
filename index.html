@@ -2886,10 +2886,10 @@ var qrcode = function() {
       loginCover(); // signed in: black screen with the logo while the collection loads
       cloud.db = fs; cloud.uid = u.uid; cloud.email = u.email || ''; 
       try { var prev = localStorage.getItem(KEY + '-uid'); if (prev && prev !== cloud.uid) { db = normDb({}); localWrite(); } localStorage.setItem(KEY + '-uid', cloud.uid); } catch (e) {}
-      cloudStart().then(loginHide).catch(function (e) {
+      cloudStart().then(function () { loginHide(); openDeepLink(); }).catch(function (e) {
         cloud.error = (e && e.code) || 'error';
         if (cloud.error === 'permission-denied') { auth.signOut().then(function () { loginShow(fbErr(e)); }); }
-        else { loginHide(); renderPage(); var again = function () { if (cloud.on || !firebase.auth().currentUser) return; cloudStart().catch(function () { setTimeout(again, 30000); }); }; setTimeout(again, 15000); }
+        else { loginHide(); renderPage(); openDeepLink(); var again = function () { if (cloud.on || !firebase.auth().currentUser) return; cloudStart().catch(function () { setTimeout(again, 30000); }); }; setTimeout(again, 15000); }
       });
     });
   }
@@ -3639,6 +3639,10 @@ var qrcode = function() {
     h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">האכלות</h3>' + (feeds.length ? feeds.map(function (f) {
       return '<div class="logrow"><div>' + fmtDate(f.date) + (f.note ? '<small>' + esc(f.note) + '</small>' : '') + '</div><button class="icon-btn" type="button" data-act="delfeed" data-id="' + s.id + '" data-fid="' + f.id + '" aria-label="מחיקת האכלה">✕</button></div>';
     }).join('') : '<p class="note">עדיין לא תועדו האכלות.</p>') + '</div>';
+    var sheds = (db.events || []).filter(function (e) { return e.type === 'shed' && e.sid === s.id; }).sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+    h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">התנשלויות</h3>' + (sheds.length ? sheds.map(function (e) {
+      return '<div class="logrow"><div>' + fmtDate(e.date) + (e.note ? '<small>' + esc(e.note) + '</small>' : '') + '</div><button class="icon-btn" type="button" data-act="editevent" data-id="' + e.id + '" aria-label="עריכת התנשלות">✎</button></div>';
+    }).join('') : '<p class="note">עדיין לא תועדו התנשלויות.</p>') + '</div>';
     return h;
   }
   function feedFormHtml(s) {
@@ -4098,13 +4102,12 @@ var qrcode = function() {
     db.labelOpts = Object.assign({ size: 1, logo: true, sex: true, genes: true, morph: true, hatch: true, parents: false, weight: false, qr: true }, db.labelOpts || {});
     return db.labelOpts;
   }
-  function labelQr(s) {
-    try {
-      var lines = [s.code || '', s.sex === 'male' ? 'Male' : s.sex === 'female' ? 'Female' : '', (s.genes || []).join(' x '), s.hatch ? 'Hatch ' + s.hatch : ''].filter(Boolean);
-      var q = qrcode(0, 'M'); q.addData(lines.join('\n')); q.make();
-      return q.createSvgTag({ scalable: true, margin: 0 });
-    } catch (e) { return ''; }
+  // the QR on a label is a link that opens this snake (or pairing) in the app
+  var APP_URL = 'https://altermanlavi-png.github.io/ril--ball-pythons/';
+  function qrSvg(text) {
+    try { var q = qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ scalable: true, margin: 0 }); } catch (e) { return ''; }
   }
+  function labelQr(s) { return qrSvg(APP_URL + '?s=' + encodeURIComponent(s.id)); }
   function labelHtml(s, o) {
     var mn = morphNames(s.genes), fa = snakeById(s.fatherId), mo = snakeById(s.motherId);
     var sire = fa ? sname(fa) : (s.fatherText || ''), dam = mo ? sname(mo) : (s.motherText || '');
@@ -4142,15 +4145,7 @@ var qrcode = function() {
 
   /* ---------- clutch box label (both parents' genetics) ---------- */
   var PAIR_LABEL_FIELDS = [['logo', 'לוגו'], ['genes', 'גנטיקה'], ['morph', 'שם מורף'], ['dates', 'תאריכים'], ['eggs', 'מספר ביצים'], ['qr', 'קוד QR']];
-  function pairLabelQr(p) {
-    try {
-      var m = snakeById(p.maleId), f = snakeById(p.femaleId), eh = expectedHatch(p);
-      var lines = ['Clutch' + (p.season ? ' ' + p.season : ''), 'Male: ' + (m ? (m.code || '') + ' ' + (m.genes || []).join(' x ') : '?'), 'Female: ' + (f ? (f.code || '') + ' ' + (f.genes || []).join(' x ') : '?'),
-        p.laid ? 'Laid ' + p.laid : '', p.eggs ? 'Eggs ' + p.eggs : '', eh ? 'Due ' + eh : ''].filter(Boolean);
-      var q = qrcode(0, 'M'); q.addData(lines.join('\n')); q.make();
-      return q.createSvgTag({ scalable: true, margin: 0 });
-    } catch (e) { return ''; }
-  }
+  function pairLabelQr(p) { return qrSvg(APP_URL + '?p=' + encodeURIComponent(p.id)); }
   function pairLabelHtml(p, o) {
     var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], k = size[1] / 70, eh = expectedHatch(p);
     function parent(s, sym) {
@@ -4395,8 +4390,20 @@ var qrcode = function() {
     if (Math.abs(dx) > 50 && Math.abs(dy) < 60) calShift(dx > 0 ? 1 : -1);
   }, { passive: true });
 
+  // a label's QR opens the app at ?s=<snake id> or ?p=<pairing id>
+  var deepLink = (function () { try { var q = new URLSearchParams(location.search); return q.get('s') ? { s: q.get('s') } : q.get('p') ? { p: q.get('p') } : null; } catch (e) { return null; } })();
+  function openDeepLink() {
+    if (!deepLink) return;
+    var d = deepLink; deepLink = null;
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+    if (d.s && snakeById(d.s)) { ui.tab = 'collection'; renderPage(); openSheet({ type: 'detail', id: d.s }); }
+    else if (d.p && pairOf(d.p)) { ui.tab = 'pairs'; renderPage(); openSheet({ type: 'pair', pid: d.p }); }
+    else toast(d.s ? 'הנחש מהתווית לא נמצא בחשבון הזה' : 'הזיווג מהתווית לא נמצא בחשבון הזה');
+  }
+
   renderPage();
   cloudInit();
+  if (!cloud.fb) openDeepLink();
 })();
 </script>
 </body>
