@@ -85,6 +85,9 @@
 
   /* genes: chips */
   .genes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; direction: ltr; justify-content: flex-start; }
+  .picked-genes { margin-top: 2px; }
+  .picked-genes .note { margin-top: 6px; }
+  #pg-maleId, #pg-femaleId { margin-bottom: 14px; }
   .gchip { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 3px 10px; font-size: .8rem; font-weight: 600; }
   .gchip.big { font-size: .92rem; padding: 5px 6px 5px 12px; }
   .gchip button { width: 24px; height: 24px; border: none; border-radius: 50%; background: none; color: inherit; padding: 0; font-size: .75rem; line-height: 1; }
@@ -3462,22 +3465,6 @@ var qrcode = function() {
     var md = document.getElementById('modes'); if (md) md.innerHTML = modesHtml();
     var r = document.getElementById('results'); if (r) r.innerHTML = resultsHtml();
   }
-  function loadFromSnakes() {
-    var M = snakeById(document.getElementById('selM').value), F = snakeById(document.getElementById('selF').value);
-    if (!M && !F) return toast('בחרו זכר או נקבה');
-    function conv(s) {
-      var out = [];
-      (s ? s.genes || [] : []).forEach(function (g) {
-        var x = parseGene(g), pair = COMBO_EXPAND[canon(x.name).toLowerCase()];
-        if (pair) pair.forEach(function (n) { out.push({ name: n, c: 1, p: 1 }); });
-        else out.push({ name: x.name, c: x.copies, p: x.p });
-      });
-      return out;
-    }
-    db.calc.male = snakeCalcGenes(M); db.calc.female = snakeCalcGenes(F);
-    save(); renderPage();
-    toast(db.calc.male.length + db.calc.female.length ? 'הגנים נטענו' : 'לנחשים שנבחרו אין גנטיקה רשומה');
-  }
   // Recessive genes are shown the way breeders read them: a Het looks like a normal animal, so among the
   // normal-looking babies we report the chance they carry the gene ("66% Het"). "Genotype detail" splits them.
   function comboName(cx, a, b, disp) {
@@ -3584,8 +3571,14 @@ var qrcode = function() {
       return '<label class="modeRow"><span dir="ltr">' + esc(n) + (isVerified(n) ? '' : ' <small class="unv">לא מאומת</small>') + '</span><select data-gname="' + esc(n) + '">' + Object.keys(MODES).map(function (k) { return '<option value="' + k + '"' + (m === k ? ' selected' : '') + '>' + MODES[k].label + '</option>'; }).join('') + '</select></label>';
     }).join('') + '</div></div>';
   }
-  function snakeOpts(sex) {
-    return '<option value="">—</option>' + db.snakes.filter(function (s) { return s.sex === sex; }).map(function (s) { return '<option value="' + s.id + '">' + esc(snakeLabel(s)) + '</option>'; }).join('');
+  // snake pickers show the genetics next to the ID, so you can tell which snake you are choosing
+  function snakeOptText(s) { return snakeLabel(s) + ((s.genes || []).length ? ' — ' + s.genes.join(' × ') : ''); }
+  function snakeOpts(sex, sel) {
+    return '<option value="">—</option>' + db.snakes.filter(function (s) { return s.sex === sex; }).map(function (s) { return '<option value="' + s.id + '"' + (s.id === sel ? ' selected' : '') + '>' + esc(snakeOptText(s)) + '</option>'; }).join('');
+  }
+  function pickedGenesHtml(s) {
+    if (!s) return '';
+    return '<div class="picked-genes">' + ((s.genes || []).length ? genesHtml(s.genes, 0) : '<p class="note">לנחש הזה אין גנטיקה רשומה</p>') + '</div>';
   }
   function geneticsView() {
     var hint = '<p class="hint" style="margin-top:8px">הקלידו אות ובחרו מהרשימה. לחיצה על תג מחליפה: בגן רצסיבי ויזואלי ← Het ← 66% Het ← 50% Het, ובשאר הגנים בין רגיל ל-Super.</p>';
@@ -3593,9 +3586,9 @@ var qrcode = function() {
     h += '<div class="section two"><div class="panel"><h2 class="side-title">זכר ♂</h2>' + genePicker('calcm', 'm') + hint + '</div>' +
       '<div class="panel"><h2 class="side-title">נקבה ♀</h2>' + genePicker('calcf', 'f') + hint + '</div></div>';
     if (db.snakes.length) {
-      h += '<div class="section"><div class="panel"><p class="note" style="margin-bottom:10px">או טענו את הגנטיקה של נחשים מהאוסף:</p>' +
-        '<div class="grid2"><label class="field" style="margin:0">זכר ♂<select id="selM">' + snakeOpts('male') + '</select></label><label class="field" style="margin:0">נקבה ♀<select id="selF">' + snakeOpts('female') + '</select></label></div>' +
-        '<button class="btn btn-soft wide" type="button" data-act="loadsnakes" style="margin-top:12px">טעינת הגנטיקה מהנחשים</button></div></div>';
+      h += '<div class="section"><div class="panel"><p class="note" style="margin-bottom:10px">או בחרו נחשים מהאוסף, והגנטיקה שלהם תיטען מיד:</p>' +
+        '<div class="grid2"><div><label class="field" style="margin:0">זכר ♂<select id="selM">' + snakeOpts('male', ui.calcM) + '</select></label>' + pickedGenesHtml(snakeById(ui.calcM)) + '</div>' +
+        '<div><label class="field" style="margin:0">נקבה ♀<select id="selF">' + snakeOpts('female', ui.calcF) + '</select></label>' + pickedGenesHtml(snakeById(ui.calcF)) + '</div></div></div></div>';
     }
     h += '<div id="modes">' + modesHtml() + '</div>';
     h += '<div class="section"><div class="section-head"><h2 class="section-title">תוצאות אפשריות</h2>' +
@@ -3822,7 +3815,7 @@ var qrcode = function() {
     function v(k) { return p && p[k] != null ? esc(p[k]) : ''; }
     function opts(sex, sel) {
       return '<option value="">בחרו…</option>' + db.snakes.filter(function (s) { return s.sex === sex; }).map(function (s) {
-        return '<option value="' + s.id + '"' + (s.id === sel ? ' selected' : '') + '>' + esc(snakeLabel(s)) + '</option>';
+        return '<option value="' + s.id + '"' + (s.id === sel ? ' selected' : '') + '>' + esc(snakeOptText(s)) + '</option>';
       }).join('');
     }
     var noSex = !db.snakes.some(function (s) { return s.sex === 'male'; }) || !db.snakes.some(function (s) { return s.sex === 'female'; });
@@ -3831,8 +3824,8 @@ var qrcode = function() {
       '<h2 class="sheet-title">' + (p ? esc(pairName(p)) : 'זיווג חדש') + '</h2>';
     if (noSex) h += '<div class="warnbox"><p>כדי לתכנן זיווג צריך לפחות זכר אחד ונקבה אחת באוסף (מסמנים בכרטיס תחת "זכר / נקבה").</p></div>';
     h += '<form id="pairForm" data-pid="' + (p ? p.id : '') + '" autocomplete="off">' +
-      '<div class="grid2"><label class="field">זכר ♂<select name="maleId" required>' + opts('male', p && p.maleId) + '</select></label>' +
-      '<label class="field">נקבה ♀<select name="femaleId" required>' + opts('female', p && p.femaleId) + '</select></label></div>' +
+      '<div class="grid2"><div><label class="field" style="margin-bottom:0">זכר ♂<select name="maleId" required>' + opts('male', p && p.maleId) + '</select></label><div id="pg-maleId">' + pickedGenesHtml(p && snakeById(p.maleId)) + '</div></div>' +
+      '<div><label class="field" style="margin-bottom:0">נקבה ♀<select name="femaleId" required>' + opts('female', p && p.femaleId) + '</select></label><div id="pg-femaleId">' + pickedGenesHtml(p && snakeById(p.femaleId)) + '</div></div></div>' +
       '<div class="grid2"><label class="field">עונה<input type="text" name="season" maxlength="20" value="' + (p ? v('season') : new Date().getFullYear()) + '"></label>' +
       '<label class="field">ימי דגירה<input type="number" name="incubation" min="30" max="120" inputmode="numeric" value="' + (p && p.incubation ? v('incubation') : 58) + '"><span class="hint">בדרך כלל 55–60</span></label></div>' +
       '<p class="group-label">שלבים (תאריך)</p><div class="grid2">' + PAIR_STEPS.map(function (s) {
@@ -3880,6 +3873,7 @@ var qrcode = function() {
   function pairToCalc(pid) {
     var p = pairOf(pid); if (!p) return;
     db.calc.male = snakeCalcGenes(snakeById(p.maleId)); db.calc.female = snakeCalcGenes(snakeById(p.femaleId));
+    ui.calcM = p.maleId; ui.calcF = p.femaleId;
     save(); closeSheet(); ui.tab = 'genetics'; renderPage(); window.scrollTo(0, 0); toast('הגנטיקה של ההורים נטענה');
   }
   function snakeCalcGenes(s) {
@@ -4315,7 +4309,6 @@ var qrcode = function() {
       case 'icsfeed': downloadFile('ril-feeding-reminders.ics', icsFeedText(), 'text/calendar'); break;
       case 'ics': downloadFile('lavi-snakes-calendar.ics', icsText(), 'text/calendar'); break;
       case 'snoozebackup': db.snoozeUntil = addDaysISO(todayISO(), 1); save(); renderPage(); break;
-      case 'loadsnakes': loadFromSnakes(); break;
       case 'calprev': calShift(-1); break;
       case 'calnext': calShift(1); break;
       case 'caltoday': calToday(); break;
@@ -4358,6 +4351,19 @@ var qrcode = function() {
   });
   document.addEventListener('change', function (e) {
     var t = e.target;
+    // calculator: picking a snake loads its genetics right away and keeps it shown as picked
+    if (t.id === 'selM' || t.id === 'selF') {
+      var side = t.id === 'selM' ? 'male' : 'female', ps = snakeById(t.value);
+      if (side === 'male') ui.calcM = t.value; else ui.calcF = t.value;
+      if (ps) { db.calc[side] = snakeCalcGenes(ps); save(); }
+      renderPage();
+      return;
+    }
+    // pairing form: show the picked snake's genetics under the picker
+    if (t.form && t.form.id === 'pairForm' && (t.name === 'maleId' || t.name === 'femaleId')) {
+      var pg = document.getElementById('pg-' + t.name); if (pg) pg.innerHTML = pickedGenesHtml(snakeById(t.value));
+      return;
+    }
     if (t.id === 'photoFile' && t.files.length) {
       var files = Array.prototype.slice.call(t.files, 0, 4 - form.photos.length); t.value = '';
       Promise.all(files.map(function (fl) { return resizeImage(fl, 640); })).then(function (list) { form.photos = form.photos.concat(list).slice(0, 4); document.getElementById('photoRow').innerHTML = photoRowInner(); }).catch(function () { toast('לא ניתן לקרוא את התמונה'); });
