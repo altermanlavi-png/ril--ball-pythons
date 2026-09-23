@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>RIL_BALL_PYTHONS</title>
-<style>html{background:#000}</style><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RIL_BALL_PYTHONS"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><style id="nl-badge-fix">@media (max-width:700px){.nav{bottom:62px}.app{padding-bottom:calc(160px + env(safe-area-inset-bottom))}.selbar{bottom:calc(130px + env(safe-area-inset-bottom))}}</style>
+<style>html{background:#000}</style><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RIL_BALL_PYTHONS"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -125,6 +125,11 @@
   .overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
   .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
   .sheet { position: relative; width: 100%; max-width: 600px; max-height: 92vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-bottom: none; border-radius: 22px 22px 0 0; padding: 14px 18px calc(28px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); overscroll-behavior: contain; }
+  /* on a computer the sheet is a centered window, so its end is visible */
+  @media (min-width: 700px) {
+    .overlay { align-items: center; padding: 24px 16px; box-sizing: border-box; }
+    .sheet { max-height: 100%; border-bottom: 1px solid var(--line); border-radius: 22px; padding-bottom: 24px; }
+  }
   .sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
   .sheet-head .acts { display: flex; gap: 8px; }
   .sheet-title { font: 900 1.5rem/1.2 var(--serif); margin: 10px 0 16px; }
