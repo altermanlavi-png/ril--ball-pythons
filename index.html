@@ -329,6 +329,26 @@
   .sfoot .btn { min-height: 38px; padding: 6px 14px; font-size: .85rem; }
   body.customer .nav, body.customer .cornerlogo { display: none; }
   .shoplinkbox { margin-bottom: 12px; }
+  .simgwrap { position: relative; }
+  .sresbadge { position: absolute; top: 10px; right: 10px; background: var(--amber); color: #111; font-weight: 800; font-size: .85rem; padding: 4px 12px; border-radius: 999px; }
+  .scard.sres .simg { filter: grayscale(.55) brightness(.75); }
+  .sresnote { font-weight: 700; color: var(--amber); }
+  .sacts { display: flex; gap: 6px; }
+  /* printable QR sign (white paper) */
+  .posterprev { background: #fff; border-radius: 14px; padding: 18px; }
+  .poster { background: #fff; color: #000; text-align: center; direction: rtl; font-family: Heebo, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .poster .p-logo { width: 46%; max-width: 260px; filter: invert(1); }
+  .poster .p-title { font-size: 1.55rem; font-weight: 800; line-height: 1.2; }
+  .poster .p-qr { width: 62%; max-width: 300px; }
+  .poster .p-qr svg { width: 100%; height: auto; display: block; }
+  .poster .p-sub { font-size: .95rem; color: #333; max-width: 320px; }
+  @media print {
+    #printArea .poster { width: 150mm; margin: 12mm auto 0; gap: 8mm; }
+    #printArea .poster .p-logo { width: 80mm; max-width: none; }
+    #printArea .poster .p-title { font-size: 22pt; }
+    #printArea .poster .p-qr { width: 105mm; max-width: none; }
+    #printArea .poster .p-sub { font-size: 14pt; max-width: none; }
+  }
   .custexit { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 10px; z-index: 50; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: rgba(0,0,0,.5); color: var(--muted); font-size: .9rem; opacity: .6; }
   .selbar .btn { padding: 8px 12px; }
 
@@ -2739,7 +2759,7 @@ var qrcode = function() {
   // well-known Super forms with their own name
   var SUPER_ALIAS = { Mojave: 'Blue Eyed Leucistic', Lesser: 'Blue Eyed Leucistic', Butter: 'Blue Eyed Leucistic', 'Yellow Belly': 'Ivory', 'Scaleless Head': 'Scaleless' };
   var GENE_NAMES = ['Acid', 'Albino', 'Axanthic', 'Axanthic TSK', 'Axanthic VPI', 'Banana', 'Bamboo', 'Black Head', 'Black Pastel', 'Blade', 'Bongo', 'Butter', 'Calico', 'Candino', 'Caramel Albino', 'Champagne', 'Chocolate', 'Cinnamon', 'Clown', 'Confusion', 'Coral Glow', 'Crawler', 'Cryptic', 'Cypress', 'Desert Ghost', 'Dinker', 'Discovery', 'Ember', 'Enchi', 'Fader', 'Fire', 'Firefly', 'Freeway', 'Ghi', 'Ghost', 'Genetic Banded', 'Genetic Stripe', 'Gold Blush', 'Granite', 'Gravel', 'Harlequin', 'Hidden Gene Woma', 'Highway', 'Hurricane', 'Hypo', 'Jolt', 'Lavender Albino', 'Leopard', 'Lemon Blast', 'Lemonback', 'Lesser', 'Mahogany', 'Mocha', 'Mojave', 'Monsoon', 'Monkey', 'Mystic', 'Mystic Potion', 'Nova', 'Orange Dream', 'Orange Ghost', 'Pastel', 'Pewter', 'Phantom', 'Piebald', 'Pinstripe', 'Puma', 'Puzzle', 'Quill', 'Rainbow', 'Redhead', 'Red Axanthic', 'Ringer', 'Sable', 'Sandblast', 'Scaleless Head', 'Sharp', 'Spark', 'Special', 'Spider', 'Spotnose', 'Stranger', 'Sulfur', 'Sunset', 'Tri-Stripe', 'Toffee', 'Ultramel', 'Vanilla', 'Woma', 'Yellow Belly', 'Zebra', 'Lace', 'Lori', 'Mario', 'Peach', 'Raven', 'Russo', 'Candy', 'Amur', 'Taronja', 'Asphalt', 'Cinder', 'Daddy', 'Disco', 'Flame', 'Flare', 'Huffman', 'Specter', 'Wookie', 'Burgundy Albino', 'Cafe', 'Grim', 'Honey', 'Jungle Woma', 'Microscale', 'Monarch', 'Nyala', 'Orange Belly', 'Red Stripe', 'Shredder', 'Splatter', 'Static', 'Striker', 'Sugar', 'Trick', 'Twister', 'Web', 'Copper'];
-  var STATUSES = [['', 'ללא סטטוס'], ['breeder', 'רבייה'], ['holdback', 'שמור לאוסף'], ['forsale', 'למכירה'], ['sold', 'נמכר'], ['pet', 'אישי']];
+  var STATUSES = [['', 'ללא סטטוס'], ['breeder', 'רבייה'], ['holdback', 'שמור לאוסף'], ['forsale', 'למכירה'], ['reserved', 'שמור ללקוח'], ['sold', 'נמכר'], ['pet', 'אישי']];
   var MODES = {
     recessive: { label: 'רצסיבי', lv: ['נורמלי', 'הט (Het)', 'ויזואלי'] },
     codom: { label: 'קו-דומיננטי', lv: ['נורמלי', 'גן אחד', 'סופר (2)'] },
@@ -2895,10 +2915,11 @@ var qrcode = function() {
      Firestore: shops/{uid} (title, count, updated) and shops/{uid}/items/{snakeId}. Nothing else is ever copied there. */
   function shopItems() {
     var out = {};
-    db.snakes.filter(function (s) { return s.status === 'forsale'; }).forEach(function (s) {
+    db.snakes.filter(function (s) { return s.status === 'forsale' || s.status === 'reserved'; }).forEach(function (s) {
       var ph = ((s.photos && s.photos.length) ? s.photos : (s.photo ? [s.photo] : [])).slice(0, 4);
+      // only what a customer may see: never the buyer's name, the deposit, purchase price or notes
       out[s.id] = { id: s.id, code: s.code || '', name: s.name || '', sex: s.sex || '', species: s.species || '', genes: s.genes || [], morph: morphNames(s.genes),
-        hatch: s.hatch || '', weight: s.weight || '', price: Number(s.salePrice) > 0 ? Number(s.salePrice) : 0, photos: ph, sort: s.hatch || s.createdAt || '' };
+        hatch: s.hatch || '', weight: s.weight || '', price: Number(s.salePrice) > 0 ? Number(s.salePrice) : 0, photos: ph, sort: s.hatch || s.createdAt || '', reserved: s.status === 'reserved' };
     });
     return out;
   }
@@ -2929,11 +2950,13 @@ var qrcode = function() {
     cloud.shopBusy = false;
     if (ui.tab === 'shop') renderPage();
   }
-  function copyShopLink() {
+  // sid: a link that opens just one snake (the customer can still go on to the whole list)
+  function copyShopLink(sid) {
     var url = shopUrl();
     if (!url) return toast('הקישור זמין אחרי כניסה לחשבון');
+    if (sid) url += '&id=' + encodeURIComponent(sid);
     shopSync();
-    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast('הקישור הועתק. אפשר לשלוח אותו ללקוחות'); })
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast(sid ? 'הקישור לנחש הזה הועתק' : 'הקישור הועתק. אפשר לשלוח אותו ללקוחות'); })
       .catch(function () { window.prompt('העתיקו את הקישור:', url); });
   }
   // changes made with no internet: note what the cloud holds now (so deletions are sent too), then upload this device's data
@@ -3876,7 +3899,8 @@ var qrcode = function() {
     h += '<div class="spec">' + spec('תאריך בקיעה', s.hatch ? fmtDate(s.hatch) : '') + spec('משקל', s.weight ? s.weight + ' גרם' : '') + spec('מיקום', s.location) + spec('האכלה כל', s.feedEvery ? s.feedEvery + ' ימים' : '') +
       spec('אכל לאחרונה', la ? fmtDate(la.date) + ' (' + rel(daysSince(la.date)) + ')' + (preyText(la) ? ' · ' + preyText(la) : '') : '') +
       parentRow('אב', fa, s.fatherText) + parentRow('אם', mo, s.motherText) + spec('מחיר רכישה', Number(s.buyPrice) > 0 ? Number(s.buyPrice).toLocaleString('he-IL') + ' ₪' : '') +
-      (s.status === 'breeder' ? spec('ערך הנחש', Number(s.value) > 0 ? Number(s.value).toLocaleString('he-IL') + ' ₪' : '') : spec('מחיר מכירה', Number(s.salePrice) > 0 ? Number(s.salePrice).toLocaleString('he-IL') + ' ₪' : '')) + spec('קונה', s.buyer) + spec('תאריך מכירה', s.soldDate ? fmtDate(s.soldDate) : '') + '</div>';
+      (s.status === 'breeder' ? spec('ערך הנחש', Number(s.value) > 0 ? Number(s.value).toLocaleString('he-IL') + ' ₪' : '') : spec('מחיר מכירה', Number(s.salePrice) > 0 ? Number(s.salePrice).toLocaleString('he-IL') + ' ₪' : '')) + spec('קונה', s.buyer) + spec('תאריך מכירה', s.soldDate ? fmtDate(s.soldDate) : '') +
+      (s.status === 'reserved' ? spec('שמור ל', s.reservedFor) + spec('מקדמה', Number(s.deposit) > 0 ? Number(s.deposit).toLocaleString('he-IL') + ' ₪' : '') : '') + '</div>';
     if (s.notes) h += '<p style="margin-top:14px;white-space:pre-wrap;color:var(--muted)">' + esc(s.notes) + '</p>';
     h += '<div class="section"><div class="row"><button class="btn btn-primary" type="button" data-act="feedform" data-id="' + s.id + '">+ תיעוד האכלה</button><button class="btn btn-soft" type="button" data-act="sharecard" data-id="' + s.id + '">כרטיס מכירה</button></div>' +
       '<div class="row" style="margin-top:10px"><button class="btn btn-ghost" type="button" data-act="addshed" data-id="' + s.id + '">+ התנשלות</button><button class="btn btn-ghost" type="button" data-act="healthform" data-id="' + s.id + '">+ בריאות</button><button class="btn btn-ghost" type="button" data-act="label" data-id="' + s.id + '">תווית להדפסה</button></div></div>';
@@ -3982,6 +4006,7 @@ var qrcode = function() {
     else if (ui.sheet.type === 'event') sh.innerHTML = eventFormHtml();
     else if (ui.sheet.type === 'pair') sh.innerHTML = pairFormHtml();
     else if (ui.sheet.type === 'goal') sh.innerHTML = goalSheetHtml();
+    else if (ui.sheet.type === 'shopqr') sh.innerHTML = shopQrSheetHtml();
     else if (ui.sheet.type === 'expense') sh.innerHTML = expenseFormHtml();
     else if (ui.sheet.type === 'wait') sh.innerHTML = waitFormHtml();
     else if (ui.sheet.type === 'label') sh.innerHTML = labelSheetHtml();
@@ -4021,7 +4046,8 @@ var qrcode = function() {
     var data = { name: name, code: String(fd.get('code') || '').trim() || nextId(), species: String(fd.get('species') || '').trim(), sex: String(fd.get('sex') || ''),
       genes: form.genes.slice(), hatch: String(fd.get('hatch') || ''), weight: w, status: String(fd.get('status') || ''), location: String(fd.get('location') || '').trim(),
       feedEvery: num(fd.get('feedEvery')), notes: String(fd.get('notes') || '').trim(), photos: form.photos.slice(), photo: form.photos[0] || '',
-      fatherId: fa.id, fatherText: fa.text, motherId: mo.id, motherText: mo.text, buyPrice: keep('buyPrice', num), salePrice: keep('salePrice', num), value: keep('value', num), buyer: keep('buyer', String), soldDate: keep('soldDate', String) };
+      fatherId: fa.id, fatherText: fa.text, motherId: mo.id, motherText: mo.text, buyPrice: keep('buyPrice', num), salePrice: keep('salePrice', num), value: keep('value', num), buyer: keep('buyer', String), soldDate: keep('soldDate', String),
+      reservedFor: keep('reservedFor', function (x) { return String(x).trim(); }), deposit: keep('deposit', num) };
     if (s) {
       if (w !== '' && s.weight !== w) { s.weights = (s.weights || []).concat({ date: todayISO(), g: w }); }
       Object.assign(s, data);
@@ -4449,7 +4475,10 @@ var qrcode = function() {
         ? '<label class="field">ערך הנחש (₪)<input type="number" name="value" min="0" inputmode="decimal" value="' + v('value') + '"></label>'
         : '<label class="field">מחיר מכירה (₪)<input type="number" name="salePrice" min="0" inputmode="decimal" value="' + v('salePrice') + '"></label>') + '</div>' +
       (sold ? '<div class="grid2"><label class="field">קונה<input type="text" name="buyer" maxlength="80" value="' + v('buyer') + '"></label>' +
-        '<label class="field">תאריך מכירה<input type="date" name="soldDate" value="' + v('soldDate') + '"></label></div>' : '');
+        '<label class="field">תאריך מכירה<input type="date" name="soldDate" value="' + v('soldDate') + '"></label></div>' : '') +
+      (status === 'reserved' ? '<div class="grid2"><label class="field">שמור ל<input type="text" name="reservedFor" maxlength="80" value="' + v('reservedFor') + '" placeholder="שם הלקוח"></label>' +
+        '<label class="field">מקדמה ששולמה (₪)<input type="number" name="deposit" min="0" inputmode="decimal" value="' + v('deposit') + '"></label></div>' +
+        '<p class="hint" style="margin:-6px 0 14px">הנחש נשאר בקטלוג עם התווית "שמור". כשהלקוח לוקח אותו, מסמנים "נמכר".</p>' : '');
   }
   function refreshPriceGroup(status) {
     var box = document.getElementById('priceGroup'); if (!box || !form) return;
@@ -4822,10 +4851,12 @@ var qrcode = function() {
   }
 
   /* ---------- for-sale catalog: every snake marked "for sale", shown the way a customer should see it ---------- */
+  function inShop(s) { return s.status === 'forsale' || s.status === 'reserved'; }
   function shopSnakes() {
-    var l = db.snakes.filter(function (s) { return s.status === 'forsale'; });
+    var l = db.snakes.filter(inShop);
     if (ui.shopSex) l = l.filter(function (s) { return s.sex === ui.shopSex; });
     return l.sort(function (a, b) {
+      var ra = a.status === 'reserved' ? 1 : 0, rb = b.status === 'reserved' ? 1 : 0; if (ra !== rb) return ra - rb; // reserved ones last
       if (ui.shopSort === 'price') return (Number(a.salePrice) || 1e12) - (Number(b.salePrice) || 1e12);
       return String(b.hatch || b.createdAt || '').localeCompare(String(a.hatch || a.createdAt || ''));
     });
@@ -4833,33 +4864,52 @@ var qrcode = function() {
   function shopCardHtml(s) {
     var photos = (s.photos && s.photos.length) ? s.photos : (s.photo ? [s.photo] : []), mn = morphNames(s.genes);
     var who = ui.customer ? [] : db.waitlist.filter(function (w) { return waitMatches(w).some(function (x) { return x.id === s.id; }); });
-    return '<div class="scard">' +
+    var res = s.status === 'reserved';
+    return '<div class="scard' + (res ? ' sres' : '') + '"><div class="simgwrap">' +
       (photos.length ? '<img class="simg" src="' + photos[0] + '" alt="' + esc(sname(s)) + '">' : '<div class="simg sempty"><img src="' + LOGO + '" alt=""></div>') +
+      (res ? '<span class="sresbadge">שמור</span>' : '') + '</div>' +
       '<div class="sbody"><div class="stop"><b>' + esc(sname(s)) + '</b>' + (sexSym(s.sex) ? '<span class="sex">' + sexSym(s.sex) + '</span>' : '') + '</div>' +
       (mn.length ? '<span class="morph">' + esc(mn.join(', ')) + '</span>' : '') +
       ((s.genes || []).length ? genesHtml(s.genes, 0) : '<div class="genes"><span class="gchip">Normal</span></div>') +
       '<span class="note">' + esc([s.sex === 'male' ? 'זכר' : s.sex === 'female' ? 'נקבה' : '', age(s) ? 'גיל ' + age(s) : '', s.weight ? s.weight + ' גרם' : ''].filter(Boolean).join(' · ')) + '</span>' +
-      '<div class="sfoot">' + (Number(s.salePrice) > 0 ? '<span class="sprice">' + Number(s.salePrice).toLocaleString('he-IL') + ' ₪</span>' : '<span class="note">מחיר לפי פנייה</span>') +
-      (ui.customer ? '' : '<button class="btn btn-soft" type="button" data-act="open" data-id="' + s.id + '">כרטיס</button>') + '</div>' +
-      (who.length ? '<span class="stage done" style="margin-top:6px">✓ מחכים לו: ' + esc(who.map(function (w) { return w.name; }).join(', ')) + '</span>' : '') +
+      '<div class="sfoot">' + (res ? '<span class="sresnote">שמור ללקוח</span>' : Number(s.salePrice) > 0 ? '<span class="sprice">' + Number(s.salePrice).toLocaleString('he-IL') + ' ₪</span>' : '<span class="note">מחיר לפי פנייה</span>') +
+      (ui.customer ? '' : '<span class="sacts"><button class="btn btn-soft" type="button" data-act="copysnakelink" data-id="' + s.id + '" aria-label="העתקת קישור לנחש הזה">🔗 קישור</button><button class="btn btn-soft" type="button" data-act="open" data-id="' + s.id + '">כרטיס</button></span>') + '</div>' +
+      (!ui.customer && res && (s.reservedFor || Number(s.deposit) > 0) ? '<span class="note">' + esc([s.reservedFor ? 'שמור ל־' + s.reservedFor : '', Number(s.deposit) > 0 ? 'מקדמה ' + Number(s.deposit).toLocaleString('he-IL') + ' ₪' : ''].filter(Boolean).join(' · ')) + '</span>' : '') +
+      (who.length && !res ? '<span class="stage done" style="margin-top:6px">✓ מחכים לו: ' + esc(who.map(function (w) { return w.name; }).join(', ')) + '</span>' : '') +
       '</div></div>';
   }
   function shopView() {
-    var all = db.snakes.filter(function (s) { return s.status === 'forsale'; }), list = shopSnakes();
+    var all = db.snakes.filter(function (s) { return s.status === 'forsale'; }), list = shopSnakes(), any = db.snakes.some(inShop);
     var h = '<div class="shophead"><img src="' + LOGO + '" alt="RIL Ball Pythons"><div><h1 class="title">פיתונים מתכדרים זמינים לקנייה</h1><p class="sub">' + (all.length ? all.length + (all.length === 1 ? ' נחש זמין' : ' נחשים זמינים') : 'RIL Ball Pythons') + '</p></div></div>';
     if (!ui.customer) {
       h += '<div class="shoplinkbox"><button class="btn btn-primary wide" type="button" data-act="copyshoplink">🔗 העתקת קישור ללקוחות</button>' +
         '<p class="hint" style="margin-top:6px">הלקוח רואה רק את הנחשים שמסומנים "למכירה". בלי כניסה, ובלי גישה לשום דבר אחר באפליקציה. כל שינוי כאן מתעדכן בקישור לבד.</p>' +
         (cloud.shopErr === 'permission-denied' ? '<div class="warnbox red"><p>הקישור עוד לא פעיל: צריך לעדכן פעם אחת את כללי האבטחה ב־Firebase כדי לאפשר את הקטלוג הציבורי.</p></div>' : cloud.shopErr ? '<p class="note" style="color:var(--amber)">העדכון של הקישור לא הצליח כרגע. ננסה שוב בשינוי הבא.</p>' : '') +
         (!cloud.fb ? '<p class="note">הקישור זמין רק באתר, אחרי כניסה לחשבון.</p>' : '') + '</div>';
-      h += '<div class="row" style="margin-bottom:12px"><button class="btn btn-soft" type="button" data-act="customer">תצוגה ללקוח</button><button class="btn btn-soft" type="button" data-act="shareshop">שיתוף כטקסט</button></div>';
+      h += '<div class="row" style="margin-bottom:12px"><button class="btn btn-soft" type="button" data-act="customer">תצוגה ללקוח</button><button class="btn btn-soft" type="button" data-act="shopqr">קוד QR להדפסה</button><button class="btn btn-soft" type="button" data-act="shareshop">כטקסט</button></div>';
     }
-    if (!all.length) return h + '<div class="empty"><h3>אין כרגע נחשים למכירה</h3><p>כדי שנחש יופיע כאן, בוחרים בכרטיס שלו את הסטטוס "למכירה" ומוסיפים מחיר.</p>' + (ui.customer ? '' : '<button class="btn btn-soft" type="button" data-act="tab" data-tab="collection">לאוסף</button>') + '</div>';
+    if (!any) return h + '<div class="empty"><h3>אין כרגע נחשים למכירה</h3><p>כדי שנחש יופיע כאן, בוחרים בכרטיס שלו את הסטטוס "למכירה" ומוסיפים מחיר.</p>' + (ui.customer ? '' : '<button class="btn btn-soft" type="button" data-act="tab" data-tab="collection">לאוסף</button>') + '</div>';
     h += '<div class="chips">' + [['', 'הכל'], ['male', 'זכרים ♂'], ['female', 'נקבות ♀']].map(function (c) { return '<button class="chip' + ((ui.shopSex || '') === c[0] ? ' on' : '') + '" type="button" data-act="shopsex" data-v="' + c[0] + '">' + c[1] + '</button>'; }).join('') +
       [['new', 'צעירים קודם'], ['price', 'לפי מחיר']].map(function (c) { return '<button class="chip' + ((ui.shopSort || 'new') === c[0] ? ' on' : '') + '" type="button" data-act="shopsort" data-v="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>';
     h += list.length ? '<div class="shopgrid">' + list.map(shopCardHtml).join('') + '</div>' : '<div class="empty">אין נחשים שמתאימים לסינון.</div>';
     if (ui.customer) h += '<button class="custexit" type="button" data-act="customer" aria-label="יציאה מתצוגה ללקוח">✕</button>';
     return h;
+  }
+  // a printable sign: logo, title and a big QR code that opens the customer catalog
+  function shopPosterHtml() {
+    return '<div class="poster"><img class="p-logo" src="' + LOGO + '" alt="RIL Ball Pythons"><div class="p-title">פיתונים מתכדרים זמינים לקנייה</div>' +
+      '<div class="p-qr">' + qrSvg(shopUrl()) + '</div><div class="p-sub">סרקו עם המצלמה של הטלפון כדי לראות את כל הנחשים הזמינים, עם תמונות, גנטיקה ומחירים</div></div>';
+  }
+  function shopQrSheetHtml() {
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button></div><h2 class="sheet-title">קוד QR לקטלוג</h2>' +
+      '<p class="note" style="margin-bottom:12px">מדפיסים ותולים ליד הנחשים, בתערוכות או על קופסאות. מי שסורק מגיע לקטלוג, שמתעדכן לבד.</p>' +
+      '<div class="posterprev">' + shopPosterHtml() + '</div>' +
+      '<div class="row" style="margin-top:14px"><button class="btn btn-primary" type="button" data-act="printshopqr">הדפסה</button><button class="btn btn-ghost" type="button" data-act="close">סגירה</button></div>';
+  }
+  function printShopQr() {
+    var pa = document.getElementById('printArea'); if (!pa) return;
+    pa.innerHTML = shopPosterHtml();
+    try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
   }
   function shareShop() {
     var list = db.snakes.filter(function (s) { return s.status === 'forsale'; });
@@ -4978,6 +5028,9 @@ var qrcode = function() {
       case 'selall': filteredSnakes().forEach(function (s) { ui.sel[s.id] = true; }); renderPage(); break;
       case 'goshop': ui.tab = 'shop'; ui.customer = false; hideSug(); renderPage(); window.scrollTo(0, 0); shopSync(); break;
       case 'copyshoplink': copyShopLink(); break;
+      case 'copysnakelink': copyShopLink(id); break;
+      case 'shopqr': if (!shopUrl()) { toast('קוד ה־QR זמין אחרי כניסה לחשבון'); break; } shopSync(); openSheet({ type: 'shopqr' }); break;
+      case 'printshopqr': printShopQr(); break;
       case 'customer': ui.customer = !ui.customer; document.body.classList.toggle('customer', ui.customer); renderPage(); window.scrollTo(0, 0); break;
       case 'shareshop': shareShop(); break;
       case 'shopsex': ui.shopSex = el.dataset.v; renderPage(); break;

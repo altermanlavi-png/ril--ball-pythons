@@ -59,6 +59,11 @@
   .meta { color: var(--muted); font-size: .85rem; }
   .price { font: 900 1.55rem 'Frank Ruhl Libre', Georgia, serif; color: var(--amber); margin-top: 4px; }
   .ask { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+  .resbadge { position: absolute; top: 10px; right: 10px; background: var(--amber); color: #111; font-weight: 800; font-size: .85rem; padding: 4px 12px; border-radius: 999px; }
+  .card.res .pic img { filter: grayscale(.55) brightness(.75); }
+  .resnote { font-weight: 700; color: var(--amber); margin-top: 4px; }
+  .single { max-width: 460px; margin: 0 auto; }
+  .allbtn { display: block; width: 100%; max-width: 460px; margin: 16px auto 0; padding: 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); text-align: center; color: var(--text); text-decoration: none; font-weight: 600; }
   .empty-state, .msg { text-align: center; color: var(--muted); padding: 50px 16px; }
   .empty-state h2 { color: var(--text); font: 800 1.3rem 'Frank Ruhl Libre', Georgia, serif; margin: 0 0 6px; }
   footer { text-align: center; color: #6f6f6f; font-size: .8rem; margin-top: 28px; }
@@ -101,22 +106,26 @@
   }
   function card(s, i) {
     var ph = s.photos || [], meta = [s.sex === 'male' ? 'זכר' : s.sex === 'female' ? 'נקבה' : '', age(s.hatch) ? 'גיל ' + age(s.hatch) : '', s.weight ? s.weight + ' גרם' : ''].filter(Boolean).join(' · ');
-    return '<div class="card">' +
-      (ph.length ? '<button class="pic" type="button" data-i="' + i + '" aria-label="תמונות של ' + esc(s.name || s.code) + '"><img src="' + ph[0] + '" alt="' + esc(s.name || s.code) + '" loading="lazy">' + (ph.length > 1 ? '<span class="more">' + ph.length + ' תמונות</span>' : '') + '</button>'
-        : '<div class="pic empty"><img src="../genetics/logo.jpg" alt=""></div>') +
+    var badge = s.reserved ? '<span class="resbadge">שמור</span>' : '';
+    return '<div class="card' + (s.reserved ? ' res' : '') + '">' +
+      (ph.length ? '<button class="pic" type="button" data-i="' + i + '" aria-label="תמונות של ' + esc(s.name || s.code) + '"><img src="' + ph[0] + '" alt="' + esc(s.name || s.code) + '" loading="lazy">' + (ph.length > 1 ? '<span class="more">' + ph.length + ' תמונות</span>' : '') + badge + '</button>'
+        : '<div class="pic empty"><img src="../genetics/logo.jpg" alt="">' + badge + '</div>') +
       '<div class="body"><div class="top">' + esc(s.name || s.code) + (sexSym(s.sex) ? ' <span class="sex">' + sexSym(s.sex) + '</span>' : '') + '</div>' +
       ((s.morph || []).length ? '<div class="morph">' + esc(s.morph.join(', ')) + '</div>' : '') +
       '<div class="genes">' + ((s.genes || []).length ? s.genes.map(function (g) { return '<span class="g">' + esc(g) + '</span>'; }).join('') : '<span class="g">Normal</span>') + '</div>' +
       (meta ? '<div class="meta">' + esc(meta) + '</div>' : '') +
-      (s.price > 0 ? '<div class="price">' + Number(s.price).toLocaleString('he-IL') + ' ₪</div>' : '<div class="ask">מחיר לפי פנייה</div>') + '</div></div>';
+      (s.reserved ? '<div class="resnote">שמור ללקוח</div>' : s.price > 0 ? '<div class="price">' + Number(s.price).toLocaleString('he-IL') + ' ₪</div>' : '<div class="ask">מחיר לפי פנייה</div>') + '</div></div>';
   }
   var shown = [];
   function render() {
+    if (onlyId) return renderOne();
     shown = items.filter(function (s) { return !sexF || s.sex === sexF; }).sort(function (a, b) {
+      if (!!a.reserved !== !!b.reserved) return a.reserved ? 1 : -1; // reserved ones last
       if (sortF === 'price') return (a.price || 1e12) - (b.price || 1e12);
       return String(b.sort || '').localeCompare(String(a.sort || ''));
     });
-    document.getElementById('count').textContent = items.length ? items.length + (items.length === 1 ? ' נחש זמין' : ' נחשים זמינים') : 'RIL Ball Pythons';
+    var free = items.filter(function (s) { return !s.reserved; }).length;
+    document.getElementById('count').textContent = free ? free + (free === 1 ? ' נחש זמין' : ' נחשים זמינים') : 'RIL Ball Pythons';
     var ch = document.getElementById('chips');
     ch.hidden = items.length < 2;
     ch.innerHTML = [['', 'הכל'], ['male', 'זכרים ♂'], ['female', 'נקבות ♀']].map(function (c) { return '<button class="chip' + (sexF === c[0] ? ' on' : '') + '" type="button" data-sex="' + c[0] + '">' + c[1] + '</button>'; }).join('') +
@@ -124,6 +133,16 @@
     document.getElementById('list').innerHTML = !items.length
       ? '<div class="empty-state"><h2>אין כרגע נחשים זמינים</h2><p>חזרו לבדוק בקרוב.</p></div>'
       : shown.length ? '<div class="grid">' + shown.map(card).join('') + '</div>' : '<p class="msg">אין נחשים שמתאימים לסינון.</p>';
+  }
+  // a link to one snake (?id=...): just that snake, and a button to the whole list
+  function renderOne() {
+    var s = items.find(function (x) { return x.id === onlyId; }), all = location.pathname + '?u=' + encodeURIComponent(uid);
+    document.getElementById('chips').hidden = true;
+    document.getElementById('count').textContent = 'RIL Ball Pythons';
+    shown = s ? [s] : [];
+    document.getElementById('list').innerHTML = (s ? '<div class="single">' + card(s, 0) + '</div>'
+      : '<div class="empty-state"><h2>הנחש הזה כבר לא זמין</h2><p>אבל יש עוד נחשים שמחכים לבית.</p></div>') +
+      (items.length ? '<a class="allbtn" href="' + esc(all) + '">לכל הנחשים הזמינים (' + items.filter(function (x) { return !x.reserved; }).length + ')</a>' : '');
   }
   function openViewer(s, k) {
     var v = document.getElementById('viewer'), ph = s.photos || [];
@@ -144,8 +163,8 @@
     else if (b.id === 'vclose') document.getElementById('viewer').classList.remove('on');
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.getElementById('viewer').classList.remove('on'); });
-  var uid = null;
-  try { uid = new URLSearchParams(location.search).get('u'); } catch (e) {}
+  var uid = null, onlyId = null;
+  try { var q = new URLSearchParams(location.search); uid = q.get('u'); onlyId = q.get('id'); } catch (e) {}
   if (!uid || !window.firebase) { document.getElementById('list').innerHTML = '<p class="msg">הקישור לא שלם. בקשו מ־RIL קישור חדש.</p>'; return; }
   firebase.initializeApp(CFG);
   firebase.firestore().collection('shops').doc(uid).collection('items').get().then(function (snap) {
