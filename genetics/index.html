@@ -41,7 +41,7 @@
   #count { min-width: 76px; text-align: center; font-size: 17px; font-variant-numeric: tabular-nums; }
   #hint { display: none; position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: rgba(27,26,24,.94); color: #f3f0e9; border: 1px solid #333; padding: 9px 18px; border-radius: 999px; font-size: 15px; direction: rtl; white-space: nowrap; pointer-events: none; }
   body.phone:not(.rot) #hint { display: block; }
-  body.phone:not(.rot) #full { background: #E3A83B; color: #151513; border-color: #E3A83B; }
+  body.mobile:not(.pres) #full { background: #E3A83B; color: #151513; border-color: #E3A83B; }
   /* presentation mode: only the slide; a small corner button goes back */
   body.pres nav { display: none; }
   #exit { display: none; position: absolute; top: 10px; left: 10px; z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.45); color: #f3f0e9; font-size: 18px; line-height: 1; cursor: pointer; opacity: .55; }
@@ -685,7 +685,7 @@
 <div id="tip" role="dialog" aria-modal="true"><div>
 <b>רוצים מסך נקי לגמרי?</b><br>
 הדפדפן לא נותן לדף להסתיר את השורות שלו. אבל אפשר להוסיף את המצגת למסך הבית, ואז היא נפתחת כמו אפליקציה, בלי שום שורה:
-<ol><li>פותחים את הקישור בספארי</li><li>לוחצים על כפתור השיתוף</li><li>בוחרים "הוספה למסך הבית"</li></ol>
+<ol><li>פותחים את הקישור בספארי (בדפדפן שבתוך אפליקציה, לוחצים על סמל המצפן)</li><li>לוחצים על כפתור השיתוף</li><li>בוחרים "הוספה למסך הבית"</li></ol>
 <button id="tipok" type="button">הבנתי</button>
 </div></div>
 <script>
@@ -720,30 +720,33 @@
   });
   // ⤢ on a phone held upright: Android goes full screen and turns to landscape; where the browser cannot
   // (iPhone, apps like Instagram), the whole view is turned 90° instead, so turning the phone fills the screen
-  var wrap = document.getElementById('wrap'), body = document.body, userRot = false;
+  var wrap = document.getElementById('wrap'), body = document.body, userRot = false, userPres = false;
   function layout() {
     var W = document.documentElement.clientWidth || window.innerWidth, H = window.innerHeight, upright = H > W, phone = Math.min(W, H) < 700;
     var rot = upright && phone && userRot;
     body.classList.toggle('phone', phone && upright);
+    body.classList.toggle('mobile', phone);
     body.classList.toggle('rot', rot);
     body.classList.toggle('short', !rot && H < 500);
-    body.classList.toggle('pres', rot || !!(document.fullscreenElement || document.webkitFullscreenElement));
+    body.classList.toggle('pres', rot || userPres || !!(document.fullscreenElement || document.webkitFullscreenElement));
     if (rot) { wrap.style.width = H + 'px'; wrap.style.height = W + 'px'; wrap.style.left = W + 'px'; }
     else { wrap.style.width = ''; wrap.style.height = ''; wrap.style.left = ''; }
     fit();
   }
   document.getElementById('full').onclick = function () {
     var d = document.documentElement, fsOn = !!(document.fullscreenElement || document.webkitFullscreenElement);
-    if (body.classList.contains('rot')) { userRot = false; layout(); return; }
+    if (body.classList.contains('rot') || userPres) { userRot = false; userPres = false; layout(); return; }
     if (fsOn) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
     var phoneUp = body.classList.contains('phone');
     var req = d.requestFullscreen || d.webkitRequestFullscreen;
     var p = null;
     try { p = req ? req.call(d) : null; } catch (e) { p = null; }
-    if (!phoneUp) return;
-    if (!p || typeof p.then !== 'function') { userRot = true; layout(); tipOnce(); return; }
+    // held upright: turn the view; held sideways (or a computer without full screen): just hide the controls
+    function fallback() { if (phoneUp) userRot = true; else userPres = true; layout(); tipOnce(); }
+    if (!p || typeof p.then !== 'function') { fallback(); return; }
     var settled = false;
-    function turn() { if (settled) return; settled = true; userRot = true; layout(); tipOnce(); }
+    function turn() { if (settled) return; settled = true; fallback(); }
+    if (!phoneUp) { p.then(function () { settled = true; }).catch(turn); setTimeout(function () { if (!settled && !document.fullscreenElement) turn(); }, 800); return; }
     p.then(function () {
       if (screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape').then(function () { settled = true; });
       throw new Error('no lock');
@@ -754,7 +757,7 @@
   document.addEventListener('fullscreenchange', function () { setTimeout(layout, 150); });
   document.getElementById('exit').onclick = function (e) {
     e.stopPropagation();
-    userRot = false;
+    userRot = false; userPres = false;
     if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     layout();
   };
