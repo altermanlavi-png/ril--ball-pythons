@@ -2880,7 +2880,7 @@ var qrcode = function() {
     (db.events || []).forEach(function (e) { docs['events/' + e.id] = e; });
     (db.expenses || []).forEach(function (x) { docs['expenses/' + x.id] = x; });
     (db.waitlist || []).forEach(function (w) { docs['waitlist/' + w.id] = w; });
-    docs['meta/app'] = { remindFeed: db.remindFeed !== false, customGenes: db.customGenes, draftGenes: db.draftGenes, calc: db.calc, labelOpts: db.labelOpts || {}, lastBackup: db.lastBackup || '', snoozeUntil: db.snoozeUntil || '', created: db.created || '', goals: db.goals || [] };
+    docs['meta/app'] = { remindFeed: db.remindFeed !== false, customGenes: db.customGenes, draftGenes: db.draftGenes, calc: db.calc, labelOpts: db.labelOpts || {}, lastBackup: db.lastBackup || '', snoozeUntil: db.snoozeUntil || '', created: db.created || '', goals: db.goals || [], lastCloudBackup: db.lastCloudBackup || '' };
     return docs;
   }
   // one place that knows where a document lives: Claude's database keeps folders, Firebase keeps one flat 'team' collection
@@ -2918,9 +2918,20 @@ var qrcode = function() {
     cloud.busy = false;
   }
   // returns 'uploaded' (the cloud was empty, so this device's data goes up) or 'loaded' (the cloud copy replaced the local one)
+  // Firebase keeps everything in one collection per account, so it is read ONCE and split by name
+  // (it used to be read six times on every start, which uses up the free daily reading quota much faster)
+  async function cloudReadAll() {
+    var s = await fbBase().get(), by = {}, meta = null;
+    s.docs.forEach(function (x) {
+      if (x.id === 'meta__app') { meta = x; return; }
+      var k = x.id.split('__')[0]; (by[k] = by[k] || []).push(x);
+    });
+    function col(n) { var docs = by[n] || []; return { docs: docs, size: docs.length }; }
+    return [col('snakes'), col('pairs'), col('events'), col('photos'), meta ? { exists: true, data: function () { return meta.data(); } } : { exists: false, data: function () { return {}; } }, col('expenses'), col('waitlist')];
+  }
   async function cloudLoad() {
     var d = cloud.db;
-    var r = await Promise.all([cAll('snakes'), cAll('pairs'), cAll('events'), cAll('photos'), cDoc('meta/app').get(), cAll('expenses'), cAll('waitlist')]);
+    var r = cloud.fb ? await cloudReadAll() : await Promise.all([cAll('snakes'), cAll('pairs'), cAll('events'), cAll('photos'), cDoc('meta/app').get(), cAll('expenses'), cAll('waitlist')]);
     var snakes = r[0], pairs = r[1], events = r[2], photos = r[3], meta = r[4], expenses = r[5], waitlist = r[6];
     if (!(snakes.size || pairs.size || events.size || meta.exists || expenses.size || waitlist.size)) { cloud.last = {}; cloud.dirty = true; return 'uploaded'; }
     var m = meta.exists ? JSON.parse(JSON.stringify(meta.data())) : {}, byS = {};
@@ -2929,7 +2940,7 @@ var qrcode = function() {
     var nd = {
       snakes: snakes.docs.map(function (x) { var s = body(x), ph = (byS[s.id] || []).filter(Boolean); s.photos = ph; s.photo = ph[0] || ''; delete s.photoCount; return s; }),
       pairs: pairs.docs.map(body), events: events.docs.map(body), expenses: expenses.docs.map(body), waitlist: waitlist.docs.map(body),
-      remindFeed: m.remindFeed, customGenes: m.customGenes, draftGenes: m.draftGenes, calc: m.calc, labelOpts: m.labelOpts, lastBackup: m.lastBackup, snoozeUntil: m.snoozeUntil, created: m.created, goals: m.goals
+      remindFeed: m.remindFeed, customGenes: m.customGenes, draftGenes: m.draftGenes, calc: m.calc, labelOpts: m.labelOpts, lastBackup: m.lastBackup, snoozeUntil: m.snoozeUntil, created: m.created, goals: m.goals, lastCloudBackup: m.lastCloudBackup
     };
     if (db.snakes.length) { try { localStorage.setItem(KEY + '-before-cloud', JSON.stringify(db)); } catch (e) {} } // safety copy of what this device had
     db = normDb(nd);
@@ -2989,6 +3000,61 @@ var qrcode = function() {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast(sid ? 'הקישור לנחש הזה הועתק' : 'הקישור הועתק. אפשר לשלוח אותו ללקוחות'); })
       .catch(function () { window.prompt('העתיקו את הקישור:', url); });
   }
+  /* ---------- weekly cloud backups: users/{uid}/backups, a full copy of the data (photos stay where they are), last 4 kept ---------- */
+  var BACKUP_KEEP = 4, BACKUP_CHUNK = 700000;
+  function backupCol() { return cloud.db.collection('users').doc(cloud.uid).collection('backups'); }
+  function dataWithoutPhotos() {
+    var copy = JSON.parse(JSON.stringify(db));
+    copy.snakes.forEach(function (s) { s.photos = []; s.photo = ''; });
+    return copy;
+  }
+  async function listBackups() {
+    var snap = await backupCol().get(), by = {};
+    snap.docs.forEach(function (x) { var v = x.data(); (by[v.id] = by[v.id] || { id: v.id, created: v.created, snakes: v.snakes, total: v.total, docs: [] }).docs.push(x); });
+    return Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return String(b.created).localeCompare(String(a.created)); });
+  }
+  async function cloudBackupNow() {
+    if (!cloud.fb || !cloud.on || !cloud.uid) throw new Error('offline');
+    var text = JSON.stringify(dataWithoutPhotos()), parts = [], created = new Date().toISOString(), id = created.replace(/[^0-9]/g, '').slice(0, 14);
+    for (var i = 0; i < text.length; i += BACKUP_CHUNK) parts.push(text.slice(i, i + BACKUP_CHUNK));
+    for (var j = 0; j < parts.length; j++) await backupCol().doc(id + '__' + j).set({ id: id, part: j, total: parts.length, created: created, snakes: db.snakes.length, data: parts[j] });
+    db.lastCloudBackup = todayISO(); save();
+    var all = await listBackups();
+    for (var k = BACKUP_KEEP; k < all.length; k++) for (var n = 0; n < all[k].docs.length; n++) await all[k].docs[n].ref.delete();
+  }
+  function cloudBackupMaybe() {
+    if (!cloud.fb || !cloud.on) return;
+    if (db.lastCloudBackup && daysSince(db.lastCloudBackup) < 7) return;
+    cloudBackupNow().catch(function () {});
+  }
+  async function restoreBackup(id) {
+    var all = await listBackups(), b = all.find(function (x) { return x.id === id; });
+    if (!b) throw new Error('missing');
+    var parts = b.docs.map(function (x) { return x.data(); }).sort(function (a, c) { return a.part - c.part; });
+    if (parts.length !== b.total) throw new Error('partial');
+    var restored = normDb(JSON.parse(parts.map(function (p) { return p.data; }).join('')));
+    // photos were not in the backup: keep the ones this device has for the same snakes
+    var photos = {}; db.snakes.forEach(function (s) { photos[s.id] = { photos: s.photos || [], photo: s.photo || '' }; });
+    restored.snakes.forEach(function (s) { if (photos[s.id]) { s.photos = photos[s.id].photos; s.photo = photos[s.id].photo; } });
+    try { localStorage.setItem(KEY + '-before-restore', JSON.stringify(db)); } catch (e) {}
+    db = restored; save(); renderPage();
+  }
+  function cloudBackupHtml() {
+    if (!cloud.fb) return '';
+    return '<div class="section"><div class="section-head"><h2 class="section-title">גיבוי בענן</h2></div>' +
+      '<p class="note">כל שבוע נשמר אוטומטית עותק של כל הנתונים, וארבעת האחרונים נשמרים. ' + (db.lastCloudBackup ? 'הגיבוי האחרון: ' + fmtDate(db.lastCloudBackup) + '.' : 'עוד לא נשמר גיבוי.') + '</p>' +
+      '<div class="row" style="margin-top:10px"><button class="btn btn-soft" type="button" data-act="backupnow">גיבוי עכשיו</button><button class="btn btn-soft" type="button" data-act="openbackups">שחזור מגיבוי</button></div></div>';
+  }
+  function backupsSheetHtml() {
+    var list = ui.sheet.list;
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button></div><h2 class="sheet-title">שחזור מגיבוי</h2>' +
+      '<p class="note" style="margin-bottom:12px">שחזור מחליף את כל הנתונים הנוכחיים בנתונים מהגיבוי. התמונות נשארות כמו שהן. לפני השחזור נשמר במכשיר עותק של המצב הנוכחי.</p>' +
+      (!list ? '<p class="note">טוען…</p>' : !list.length ? '<p class="note">עוד אין גיבויים.</p>' : list.map(function (b) {
+        var d = new Date(b.created);
+        return '<div class="logrow"><div>' + fmtDate(d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())) + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '<small>' + b.snakes + ' נחשים</small></div>' +
+          '<button class="btn btn-soft" type="button" data-act="restorebackup" data-id="' + b.id + '" style="min-height:38px;padding:6px 14px">שחזור</button></div>';
+      }).join(''));
+  }
   // changes made with no internet: note what the cloud holds now (so deletions are sent too), then upload this device's data
   async function cloudPushLocal() {
     var s = await fbBase().get();
@@ -3003,6 +3069,7 @@ var qrcode = function() {
       cloud.on = true; cloud.error = '';
       if (how === 'uploaded' || how === 'pushed') { cloudSync(); toast(how === 'pushed' ? 'השינויים ששמרתם במכשיר עלו לענן' : 'הנתונים הועלו לענן'); }
       else shopSync();
+      setTimeout(cloudBackupMaybe, 5000);
       renderPage();
     });
   }
@@ -3518,7 +3585,7 @@ var qrcode = function() {
     h += '<button class="shoplink" type="button" data-act="goshop"><span><b>קטלוג למכירה</b><small>' + (fs ? fs + (fs === 1 ? ' נחש זמין' : ' נחשים זמינים') + ' · להראות ללקוח או לשתף' : 'עוד אין נחשים שמסומנים "למכירה"') + '</small></span><span aria-hidden="true">‹</span></button>';
     h += '<div class="carebox"><div><b>מדריך טיפול ללקוח</b><small>דף של RIL עם טמפרטורה, לחות, האכלה, התנשלות וסימני אזהרה. שולחים לכל מי שקונה נחש.</small></div>' +
       '<div class="row"><button class="btn btn-soft" type="button" data-act="copycare">🔗 העתקת קישור</button><button class="btn btn-soft" type="button" data-act="opencare">פתיחה</button></div></div>';
-    h += businessHtml() + waitlistHtml();
+    h += businessHtml() + waitlistHtml() + cloudBackupHtml();
     h += '<div class="section"><div class="section-head"><h2 class="section-title">תזכורות</h2></div>' +
       '<label class="tgl"><input type="checkbox" id="remindTgl"' + (db.remindFeed !== false ? ' checked' : '') + '> תזכורת יום לפני האכלה (במסך הבית)</label>' +
       '<p class="hint" style="margin:8px 0 10px">כדי לקבל התראה גם כשהאפליקציה סגורה, אפשר לייצא את מועדי ההאכלה ליומן הטלפון. ביומן תופיע התראה יום לפני כל האכלה.</p>' +
@@ -4039,6 +4106,7 @@ var qrcode = function() {
     else if (ui.sheet.type === 'pair') sh.innerHTML = pairFormHtml();
     else if (ui.sheet.type === 'goal') sh.innerHTML = goalSheetHtml();
     else if (ui.sheet.type === 'shopqr') sh.innerHTML = shopQrSheetHtml();
+    else if (ui.sheet.type === 'backups') sh.innerHTML = backupsSheetHtml();
     else if (ui.sheet.type === 'cert') { if (!s) return closeSheet(); sh.innerHTML = certSheetHtml(s); }
     else if (ui.sheet.type === 'expense') sh.innerHTML = expenseFormHtml();
     else if (ui.sheet.type === 'wait') sh.innerHTML = waitFormHtml();
@@ -5093,6 +5161,9 @@ var qrcode = function() {
       case 'goshop': ui.tab = 'shop'; ui.customer = false; hideSug(); renderPage(); window.scrollTo(0, 0); shopSync(); break;
       case 'copyshoplink': copyShopLink(); break;
       case 'copysnakelink': copyShopLink(id); break;
+      case 'backupnow': el.disabled = true; cloudBackupNow().then(function () { toast('הגיבוי נשמר בענן'); renderPage(); }).catch(function () { el.disabled = false; toast('הגיבוי לא הצליח. בדקו שיש אינטרנט ונסו שוב'); }); break;
+      case 'openbackups': openSheet({ type: 'backups', list: null }); listBackups().then(function (l) { if (ui.sheet && ui.sheet.type === 'backups') { ui.sheet.list = l; renderSheet(); } }).catch(function () { if (ui.sheet && ui.sheet.type === 'backups') { ui.sheet.list = []; renderSheet(); } toast('לא ניתן לטעון את הגיבויים כרגע'); }); break;
+      case 'restorebackup': if (confirm('לשחזר את הגיבוי? כל הנתונים הנוכחיים יוחלפו בנתונים מהגיבוי.')) { restoreBackup(id).then(function () { closeSheet(); toast('הגיבוי שוחזר'); }).catch(function () { toast('השחזור לא הצליח'); }); } break;
       case 'copycare': (navigator.clipboard ? navigator.clipboard.writeText(careUrl()) : Promise.reject()).then(function () { toast('הקישור למדריך הטיפול הועתק'); }).catch(function () { window.prompt('העתיקו את הקישור:', careUrl()); }); break;
       case 'opencare': window.open(careUrl(), '_blank'); break;
       case 'cert': openSheet({ type: 'cert', id: id }); break;
