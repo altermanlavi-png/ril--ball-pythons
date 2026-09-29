@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>RIL_BALL_PYTHONS</title>
 <style>html{background:#000}</style><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RIL_BALL_PYTHONS"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000">
@@ -23,6 +23,9 @@
     --sans: 'Rubik', 'Heebo', -apple-system, 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
   }  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; direction: rtl; }
+  /* keep the app still on phones: no zoom, no sideways drift, no bounce or pull-to-refresh; lists still scroll up and down */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: pan-x pan-y; overflow-x: hidden; overscroll-behavior: none; }
+  body { overflow-x: clip; overscroll-behavior: none; }
   body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--logo) center 45% / min(125vw, 820px) auto no-repeat; filter: blur(9px); opacity: .42; }
   /* cards inside the page are glass, so the blurred logo shows through them; sheets and the nav stay solid */
   .app { --surface: rgba(14,14,14,.62); --surface2: rgba(24,24,24,.62); }
@@ -126,7 +129,7 @@
   /* sheet */
   .overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
   .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
-  .sheet { position: relative; width: 100%; max-width: 600px; max-height: 92vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-bottom: none; border-radius: 22px 22px 0 0; padding: 14px 18px calc(28px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); overscroll-behavior: contain; }
+  .sheet { position: relative; width: 100%; max-width: 600px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-bottom: none; border-radius: 22px 22px 0 0; padding: 14px 18px calc(28px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); overscroll-behavior: contain; }
   /* on a computer the sheet is a centered window, so its end is visible */
   @media (min-width: 700px) {
     .overlay { align-items: center; padding: 24px 16px; box-sizing: border-box; }
@@ -284,7 +287,7 @@
   /* home: black splash with the logo */
   html:has(body.home) { background: #000; }
   body.home { background: transparent; color: #fff; }
-  .homehero { min-height: calc(100vh - 150px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding-block: 24px; }
+  .homehero { min-height: calc(100vh - 150px); min-height: calc(100dvh - 150px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding-block: 24px; }
   .welcome { font: 500 1.55rem/1.2 var(--sans); color: #fff; letter-spacing: .02em; }
   .logo { width: min(88%, 480px); height: auto; display: block; }
   .nav { background: rgba(0,0,0,.86); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
@@ -4432,6 +4435,11 @@ var qrcode = function() {
     swipe = null;
     if (Math.abs(dx) > 50 && Math.abs(dy) < 60) calShift(dx > 0 ? 1 : -1);
   }, { passive: true });
+
+  // iPhone Safari ignores user-scalable=no, so block its pinch-zoom gestures directly
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
 
   // a label's QR opens the app at ?s=<snake id> or ?p=<pairing id>
   var deepLink = (function () { try { var q = new URLSearchParams(location.search); return q.get('s') ? { s: q.get('s') } : q.get('p') ? { p: q.get('p') } : null; } catch (e) { return null; } })();
