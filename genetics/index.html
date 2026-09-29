@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>RIL — גנטיקה של פיתונים מתכדרים</title>
+<meta name="description" content="מצגת של RIL Ball Pythons על גנטיקה של פיתונים מתכדרים: רצסיבי, קו־דומיננטי, דומיננטי, קומפלקסים וקומבואים">
+<meta property="og:title" content="RIL — גנטיקה של פיתונים מתכדרים">
+<meta property="og:description" content="רצסיבי · קו־דומיננטי · דומיננטי · קומפלקסים · קומבואים">
+<link rel="icon" href="../icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500..900&family=Rubik:wght@300..700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { display: flex; flex-direction: column; font-family: 'Rubik', Arial, sans-serif; -webkit-text-size-adjust: 100%; }
+  #stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  #frame { position: relative; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  #deck { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: top left; }
+  #deck > section { position: absolute; inset: 0; width: 1920px; height: 1080px; box-sizing: border-box; overflow: hidden; display: none !important; }
+  #deck > section.on { display: flex !important; }
+  #deck h1, #deck h2, #deck h3, #deck p { margin: 0; }
+  #deck table { border-collapse: collapse; }
+  #deck th, #deck td { padding: 0.35em 0.6em; border-bottom: 1px solid rgba(128,128,128,.28); vertical-align: top; }
+  #deck div, #deck p, #deck table { box-sizing: border-box; }
+  nav { flex: none; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); color: #d9d4c9; direction: rtl; }
+  nav button { background: #1b1a18; color: #f3f0e9; border: 1px solid #333; border-radius: 12px; min-width: 52px; height: 44px; font-size: 22px; cursor: pointer; }
+  nav button:disabled { opacity: .35; cursor: default; }
+  nav button, #count { direction: ltr; unicode-bidi: isolate; }
+  #count { min-width: 76px; text-align: center; font-size: 17px; font-variant-numeric: tabular-nums; }
+  #hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(27,26,24,.92); color: #f3f0e9; padding: 8px 16px; border-radius: 999px; font-size: 15px; direction: rtl; transition: opacity .4s; pointer-events: none; }
+  @media (orientation: landscape) and (max-height: 500px) { nav { padding-top: 4px; padding-bottom: 4px; } nav button { height: 36px; } }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame"><div id="deck">
+<section id="cover" data-transition="fade" style="background:radial-gradient(circle at 50% 38%, #26241F 0%, #0D0D0C 62%); color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:center; padding:128px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:40px">
+<img src="logo.jpg" alt="הלוגו של RIL Ball Pythons" style="width:620px; height:440px; object-fit:contain; mix-blend-mode:screen">
+<h1 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:112px; font-weight:800; line-height:1.1; color:#F3F0E9; text-align:center">&#8235;הגנטיקה של פיתונים מתכדרים&#8236;</h1>
+<p style="font-size:32px; font-weight:500; color:#E3A83B; letter-spacing:2px; text-align:center">&#8235;רצסיבי · קו־דומיננטי · דומיננטי · קומפלקסים · קומבואים&#8236;</p>
+</section>
+<section id="agenda" data-transition="fade" style="background:#0D0D0C; color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#E3A83B">&#8235;תוכן&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#F3F0E9">&#8235;מה נלמד היום&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; flex-wrap:wrap; gap:32px">
+<div style="width:533px; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:10px">
+<p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; line-height:1; color:#E3A83B">01</p>
+<h3 style="font-size:32px; font-weight:700; color:#F3F0E9">&#8235;יסודות&#8236;</h3>
+<p style="font-size:24px; line-height:1.4; color:#B9B4AA">&#8235;זוג גנים, ויזואל, הט וסופר&#8236;</p>
+</div>
+<div style="width:533px; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:10px">
+<p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; line-height:1; color:#E3A83B">02</p>
+<h3 style="font-size:32px; font-weight:700; color:#F3F0E9">&#8235;רצסיבי&#8236;</h3>
+<p style="font-size:24px; line-height:1.4; color:#B9B4AA">&#8235;רואים את הגן רק עם שני עותקים&#8236;</p>
+</div>
+<div style="width:533px; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:10px">
+<p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; line-height:1; color:#E3A83B">03</p>
+<h3 style="font-size:32px; font-weight:700; color:#F3F0E9">&#8235;קו־דומיננטי&#8236;</h3>
+<p style="font-size:24px; line-height:1.4; color:#B9B4AA">&#8235;עותק אחד נראה, שניים נותנים סופר&#8236;</p>
+</div>
+<div style="width:533px; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:10px">
+<p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; line-height:1; color:#E3A83B">04</p>
+<h3 style="font-size:32px; font-weight:700; color:#F3F0E9">&#8235;דומיננטי&#8236;</h3>
+<p style="font-size:24px; line-height:1.4; color:#B9B4AA">&#8235;עותק אחד ושניים נראים אותו דבר&#8236;</p>
+</div>
+<div style="width:533px; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:10px">
+<p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; line-height:1; color:#E3A83B">05</p>
+<h3 style="font-size:32px; font-weight:700; color:#F3F0E9">&#8235;קומפלקסים&#8236;</h3>
+<p style="font-size:24px; line-height:1.4; color:#B9B4AA">&#8235;גנים שמתחרים על אותו מקום&#8236;</p>
+</div>
+<div style="width:533px; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:10px">
+<p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; line-height:1; color:#E3A83B">06</p>
+<h3 style="font-size:32px; font-weight:700; color:#F3F0E9">&#8235;קומבואים וזהירות&#8236;</h3>
+<p style="font-size:24px; line-height:1.4; color:#B9B4AA">&#8235;איך מחברים גנים, וממה להיזהר&#8236;</p>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; mix-blend-mode:screen">
+</section>
+<section id="basics" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;יסודות&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;שני עותקים מכל גן&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:64px; align-items:start">
+<div style="width:600px; display:flex; flex-direction:column; gap:28px">
+<p style="font-size:32px; line-height:1.5; color:#151513">&#8235;לכל נחש יש שני עותקים של כל גן: אחד מהאב ואחד מהאם&#8236;</p>
+<p style="font-size:28px; line-height:1.5; color:#5A564E">&#8235;בכל ביצה, כל הורה מעביר לצאצא עותק אחד בלבד מכל זוג, באקראי. לכן האחוזים בזיווג הם סיכוי לכל ביצה, לא הבטחה לכל קלאץ'&#8236;</p>
+</div>
+<table style="flex:1; font-size:28px; color:#151513">
+<tr style="background:#151513"><th style="width:64%; text-align:right; color:#F3F0E9">&#8235;מה זה אומר&#8236;</th><th style="width:36%; text-align:right; color:#E3A83B">&#8235;המונח&#8236;</th></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">&#8235;העותק הרגיל של הגן, בלי מוטציה&#8236;</td><td style="text-align:right"><b>&#8235;רגיל (Normal)&#8236;</b></td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right">&#8235;רואים את הגן על הנחש&#8236;</td><td style="text-align:right"><b>&#8235;ויזואל (Visual)&#8236;</b></td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">&#8235;נושא עותק אחד של גן רצסיבי ונראה רגיל&#8236;</td><td style="text-align:right"><b>&#8235;הט (Het)&#8236;</b></td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right">&#8235;שני עותקים של גן קו־דומיננטי&#8236;</td><td style="text-align:right"><b>&#8235;סופר (Super)&#8236;</b></td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">&#8235;ייתכן שהנחש הט. האחוז הוא הסיכוי&#8236;</td><td style="text-align:right"><b>&#8235;פוסיבל הט&#8236;</b></td></tr>
+</table>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="types" data-transition="fade" style="background:#0D0D0C; color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#E3A83B">&#8235;יסודות&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#F3F0E9">&#8235;שלושה סוגי תורשה&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:32px; flex:1">
+<div style="flex:1; background:#1B1A18; border-radius:20px; padding:40px; display:flex; flex-direction:column; gap:22px; border-top:6px solid #E3A83B">
+<h3 style="font-size:44px; font-weight:700; color:#E3A83B">&#8235;רצסיבי&#8236;</h3>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;עותק אחד&#8236;</p><p style="font-size:30px; color:#F3F0E9">&#8235;נראה רגיל (הט)&#8236;</p></div>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;שני עותקים&#8236;</p><p style="font-size:30px; color:#F3F0E9">&#8235;ויזואל&#8236;</p></div>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;דוגמאות&#8236;</p><p style="font-size:30px; color:#F3F0E9">Clown · Piebald · Albino</p></div>
+</div>
+<div style="flex:1; background:#1B1A18; border-radius:20px; padding:40px; display:flex; flex-direction:column; gap:22px; border-top:6px solid #E3A83B">
+<h3 style="font-size:44px; font-weight:700; color:#E3A83B">&#8235;קו־דומיננטי&#8236;</h3>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;עותק אחד&#8236;</p><p style="font-size:30px; color:#F3F0E9">&#8235;ויזואל&#8236;</p></div>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;שני עותקים&#8236;</p><p style="font-size:30px; color:#F3F0E9">&#8235;סופר, שנראה שונה&#8236;</p></div>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;דוגמאות&#8236;</p><p style="font-size:30px; color:#F3F0E9">Pastel · Mojave · Enchi</p></div>
+</div>
+<div style="flex:1; background:#1B1A18; border-radius:20px; padding:40px; display:flex; flex-direction:column; gap:22px; border-top:6px solid #E3A83B">
+<h3 style="font-size:44px; font-weight:700; color:#E3A83B">&#8235;דומיננטי&#8236;</h3>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;עותק אחד&#8236;</p><p style="font-size:30px; color:#F3F0E9">&#8235;ויזואל&#8236;</p></div>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;שני עותקים&#8236;</p><p style="font-size:30px; color:#F3F0E9">&#8235;נראה אותו דבר&#8236;</p></div>
+<div style="display:flex; flex-direction:column; gap:4px"><p style="font-size:24px; color:#B9B4AA">&#8235;דוגמאות&#8236;</p><p style="font-size:30px; color:#F3F0E9">Pinstripe</p></div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; mix-blend-mode:screen">
+</section>
+<section id="recessive" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;סוג 1 · רצסיבי&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;רואים את הגן רק עם שני עותקים&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:64px; align-items:start">
+<div style="flex:1; display:flex; flex-direction:column; gap:36px">
+<p style="font-size:32px; line-height:1.5; color:#151513">&#8235;גן רצסיבי מופיע על הנחש רק כשיש לו שני עותקים של אותו גן. נחש עם עותק אחד נקרא הט: הוא נראה רגיל לגמרי, אבל מעביר את הגן לחצי מהצאצאים שלו&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; flex-wrap:wrap; gap:14px">
+<p style="font-size:28px; font-weight:600; background:#151513; color:#F3F0E9; padding:10px 24px; border-radius:999px">Clown</p>
+<p style="font-size:28px; font-weight:600; background:#151513; color:#F3F0E9; padding:10px 24px; border-radius:999px">Piebald</p>
+<p style="font-size:28px; font-weight:600; background:#151513; color:#F3F0E9; padding:10px 24px; border-radius:999px">Albino</p>
+<p style="font-size:28px; font-weight:600; background:#151513; color:#F3F0E9; padding:10px 24px; border-radius:999px">Axanthic</p>
+<p style="font-size:28px; font-weight:600; background:#151513; color:#F3F0E9; padding:10px 24px; border-radius:999px">Lavender Albino</p>
+<p style="font-size:28px; font-weight:600; background:#151513; color:#F3F0E9; padding:10px 24px; border-radius:999px">Desert Ghost</p>
+<p style="font-size:28px; font-weight:600; background:#151513; color:#F3F0E9; padding:10px 24px; border-radius:999px">Ultramel</p>
+<p style="font-size:28px; font-weight:600; background:#151513; color:#F3F0E9; padding:10px 24px; border-radius:999px">Genetic Stripe</p>
+</div>
+</div>
+<div style="width:600px; background:#E3A83B; border-radius:20px; padding:40px; display:flex; flex-direction:column; gap:18px">
+<h3 style="font-size:36px; font-weight:700; color:#151513">&#8235;למה זה חשוב למגדל&#8236;</h3>
+<p style="font-size:28px; line-height:1.5; color:#151513">&#8235;אי אפשר לדעת לפי המראה אם נחש הוא הט. רק התיעוד של ההורים מוכיח את זה, ולכן הוא קובע גם את המחיר של נחש הט&#8236;</p>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="rec-hethet" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;רצסיבי · ריבוע פאנט&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;הט Clown × הט Clown&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:96px; align-items:start">
+<div style="flex:1; display:flex; flex-direction:column; gap:22px">
+<div style="display:flex; flex-direction:row-reverse; align-items:center; gap:24px; background:#FBFAF6; border-radius:16px; padding:20px 28px; border-right:10px solid #E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; color:#151513; width:150px">25%</p><p style="font-size:30px; color:#151513">&#8235;Clown ויזואל&#8236;</p></div>
+<div style="display:flex; flex-direction:row-reverse; align-items:center; gap:24px; background:#FBFAF6; border-radius:16px; padding:20px 28px; border-right:10px solid #9C968A"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; color:#151513; width:150px">50%</p><p style="font-size:30px; color:#151513">&#8235;הט Clown, נראים רגילים&#8236;</p></div>
+<div style="display:flex; flex-direction:row-reverse; align-items:center; gap:24px; background:#FBFAF6; border-radius:16px; padding:20px 28px; border-right:10px solid #D8D2C6"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:56px; font-weight:800; color:#151513; width:150px">25%</p><p style="font-size:30px; color:#151513">&#8235;רגיל, בלי הגן&#8236;</p></div>
+<p style="font-size:28px; line-height:1.5; color:#5A564E">&#8235;מבין הצאצאים שנראים רגילים, 2 מתוך 3 הם הט. לכן מוכרים אותם כ־66% פוסיבל הט&#8236;</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; color:#5A564E">&#8235;למעלה: הזכר · בצד: הנקבה&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:240px; height:96px"></div>
+<div style="width:240px; height:96px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Clown</p></div>
+<div style="width:240px; height:96px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:240px; height:150px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Clown</p></div>
+<div style="width:240px; height:150px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Clown</p></div>
+<div style="width:240px; height:150px; background:#D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#151513; text-align:center">&#8235;הט Clown&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:240px; height:150px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:240px; height:150px; background:#D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#151513; text-align:center">&#8235;הט Clown&#8236;</p></div>
+<div style="width:240px; height:150px; background:#FBFAF6; border:2px solid #D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#151513; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="rec-vishet" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;רצסיבי · ריבוע פאנט&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;Clown × הט Clown, וכל השאר&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:64px; align-items:start">
+<table style="flex:1; font-size:28px; color:#151513">
+<tr style="background:#151513"><th style="width:60%; text-align:right; color:#F3F0E9">&#8235;מה יוצא&#8236;</th><th style="width:40%; text-align:right; color:#E3A83B">&#8235;הזיווג&#8236;</th></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">&#8235;100% Clown&#8236;</td><td style="text-align:right">Clown × Clown</td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right">&#8235;&#8295;50% Clown&#8297; · &#8295;50% הט&#8297;&#8236;</td><td style="text-align:right">&#8235;Clown × הט&#8236;</td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">&#8235;100% הט Clown&#8236;</td><td style="text-align:right">&#8235;Clown × רגיל&#8236;</td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right">&#8235;&#8295;25% Clown&#8297; · &#8295;50% הט&#8297; · &#8295;25% רגיל&#8297;&#8236;</td><td style="text-align:right">&#8235;הט × הט&#8236;</td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">&#8235;50% הט · 50% רגיל, כולם נראים רגילים&#8236;</td><td style="text-align:right">&#8235;הט × רגיל&#8236;</td></tr>
+</table>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; color:#5A564E">&#8235;למעלה: Clown · בצד: הט Clown&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:90px"></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Clown</p></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Clown</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:140px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Clown</p></div>
+<div style="width:220px; height:140px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Clown</p></div>
+<div style="width:220px; height:140px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Clown</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:140px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:220px; height:140px; background:#D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#151513; text-align:center">&#8235;הט Clown&#8236;</p></div>
+<div style="width:220px; height:140px; background:#D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#151513; text-align:center">&#8235;הט Clown&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">50%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Clown</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#D8D2C6"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">50%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">&#8235;הט Clown&#8236;</p></div>
+</div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="codom" data-transition="fade" style="background:#0D0D0C; color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#E3A83B">&#8235;סוג 2 · קו־דומיננטי&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#F3F0E9">&#8235;עותק אחד נראה, שניים נותנים סופר&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:64px; align-items:start">
+<div style="width:640px; display:flex; flex-direction:column; gap:32px">
+<p style="font-size:30px; line-height:1.5; color:#F3F0E9">&#8235;בגן קו־דומיננטי מספיק עותק אחד כדי לראות אותו על הנחש. כשיש לנחש שני עותקים של אותו גן, מקבלים את צורת הסופר: נחש שנראה אחרת, ולרוב חזק יותר&#8236;</p>
+<div style="background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:14px; border-right:8px solid #E3A83B">
+<h3 style="font-size:32px; font-weight:700; color:#E3A83B">&#8235;הכוח של סופר בזיווג&#8236;</h3>
+<p style="font-size:28px; line-height:1.5; color:#B9B4AA">&#8235;לסופר יש שני עותקים, ולכן הוא מעביר את הגן לכל הצאצאים. זיווג של Super Pastel עם נחש רגיל נותן &#8295;100% Pastel&#8297;&#8236;</p>
+</div>
+</div>
+<table style="flex:1; font-size:28px; color:#F3F0E9">
+<tr style="background:#E3A83B"><th style="width:55%; text-align:right; color:#151513">&#8235;שני עותקים (סופר)&#8236;</th><th style="width:45%; text-align:right; color:#151513">&#8235;עותק אחד&#8236;</th></tr>
+<tr style="background:#1B1A18"><td style="text-align:right">Super Pastel</td><td style="text-align:right">Pastel</td></tr>
+<tr style="background:#0D0D0C"><td style="text-align:right">Super Enchi</td><td style="text-align:right">Enchi</td></tr>
+<tr style="background:#1B1A18"><td style="text-align:right">Ivory</td><td style="text-align:right">Yellow Belly</td></tr>
+<tr style="background:#0D0D0C"><td style="text-align:right">Blue Eyed Leucistic</td><td style="text-align:right">Mojave</td></tr>
+<tr style="background:#1B1A18"><td style="text-align:right">Blue Eyed Leucistic</td><td style="text-align:right">Lesser</td></tr>
+<tr style="background:#0D0D0C"><td style="text-align:right">Black Eyed Leucistic</td><td style="text-align:right">Fire</td></tr>
+<tr style="background:#1B1A18"><td style="text-align:right">Super Cinnamon</td><td style="text-align:right">Cinnamon</td></tr>
+<tr style="background:#0D0D0C"><td style="text-align:right">Super Banana</td><td style="text-align:right">Banana</td></tr>
+</table>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; mix-blend-mode:screen">
+</section>
+<section id="codom-grid" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;קו־דומיננטי · ריבוע פאנט&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">Pastel × Pastel</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:96px; align-items:start">
+<div style="flex:1; display:flex; flex-direction:column; gap:18px">
+<div style="display:flex; flex-direction:row-reverse; align-items:center; gap:24px; background:#FBFAF6; border-radius:16px; padding:16px 28px; border-right:10px solid #151513"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:52px; font-weight:800; color:#151513; width:140px">25%</p><p style="font-size:30px; color:#151513">Super Pastel</p></div>
+<div style="display:flex; flex-direction:row-reverse; align-items:center; gap:24px; background:#FBFAF6; border-radius:16px; padding:16px 28px; border-right:10px solid #E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:52px; font-weight:800; color:#151513; width:140px">50%</p><p style="font-size:30px; color:#151513">Pastel</p></div>
+<div style="display:flex; flex-direction:row-reverse; align-items:center; gap:24px; background:#FBFAF6; border-radius:16px; padding:16px 28px; border-right:10px solid #D8D2C6"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:52px; font-weight:800; color:#151513; width:140px">25%</p><p style="font-size:30px; color:#151513">&#8235;רגיל&#8236;</p></div>
+<table style="font-size:26px; color:#151513">
+<tr style="background:#151513"><th style="width:58%; text-align:right; color:#F3F0E9">&#8235;מה יוצא&#8236;</th><th style="width:42%; text-align:right; color:#E3A83B">&#8235;עוד זיווגים&#8236;</th></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">&#8235;&#8295;50% Pastel&#8297; · &#8295;50% רגיל&#8297;&#8236;</td><td style="text-align:right">&#8235;Pastel × רגיל&#8236;</td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right">&#8235;100% Pastel&#8236;</td><td style="text-align:right">&#8235;Super × רגיל&#8236;</td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">&#8235;&#8295;50% Super&#8297; · &#8295;50% Pastel&#8297;&#8236;</td><td style="text-align:right">Super × Pastel</td></tr>
+</table>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; color:#5A564E">&#8235;למעלה: הזכר · בצד: הנקבה&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:240px; height:96px"></div>
+<div style="width:240px; height:96px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Pastel</p></div>
+<div style="width:240px; height:96px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:240px; height:150px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Pastel</p></div>
+<div style="width:240px; height:150px; background:#151513; border:3px solid #E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#E3A83B; text-align:center">Super Pastel</p></div>
+<div style="width:240px; height:150px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Pastel</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:240px; height:150px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:240px; height:150px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Pastel</p></div>
+<div style="width:240px; height:150px; background:#FBFAF6; border:2px solid #D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#151513; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="dominant" data-transition="fade" style="background:#0D0D0C; color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#E3A83B">&#8235;סוג 3 · דומיננטי&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#F3F0E9">&#8235;אין צורת סופר שנראית אחרת&#8236;</h2>
+</div>
+<p style="font-size:32px; line-height:1.5; color:#F3F0E9; width:1300px; align-self:end">&#8235;בגן דומיננטי, נחש עם עותק אחד ונחש עם שני עותקים נראים אותו דבר. ההבדל מופיע רק בצאצאים: נחש עם שני עותקים (הומוזיגוט) מעביר את הגן לכל הצאצאים שלו&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:32px">
+<div style="flex:1; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:14px; border-top:6px solid #E3A83B">
+<h3 style="font-size:40px; font-weight:700; color:#E3A83B">Pinstripe</h3>
+<p style="font-size:26px; line-height:1.5; color:#B9B4AA">&#8235;הדוגמה הקלאסית לגן דומיננטי. Pinstripe × Pinstripe הוא זיווג בטוח&#8236;</p>
+</div>
+<div style="flex:1; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:14px; border-top:6px solid #E3A83B">
+<h3 style="font-size:40px; font-weight:700; color:#E3A83B">&#8235;הומוזיגוט Pinstripe&#8236;</h3>
+<p style="font-size:26px; line-height:1.5; color:#B9B4AA">&#8235;נראה בדיוק כמו Pinstripe רגיל, אבל כל הצאצאים שלו יוצאים Pinstripe&#8236;</p>
+</div>
+<div style="flex:1; background:#1B1A18; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:14px; border-top:6px solid #6E6A62">
+<h3 style="font-size:40px; font-weight:700; color:#B9B4AA">&#8235;למה לא Spider?&#8236;</h3>
+<p style="font-size:26px; line-height:1.5; color:#B9B4AA">&#8235;Spider ו־Champagne לא מזווגים עם עצמם, ולכן אי אפשר לראות בהם את הכלל הזה&#8236;</p>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; mix-blend-mode:screen">
+</section>
+<section id="dom-grid" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;דומיננטי · ריבוע פאנט&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;עותק אחד מול שני עותקים&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; justify-content:space-between">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:28px; font-weight:700; color:#151513">&#8235;Pinstripe עם עותק אחד × רגיל&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:90px"></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Pinstripe</p></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Pinstripe</p></div>
+<div style="width:220px; height:130px; background:#FBFAF6; border:2px solid #D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#151513; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Pinstripe</p></div>
+<div style="width:220px; height:130px; background:#FBFAF6; border:2px solid #D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#151513; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">50%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Pinstripe</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#FBFAF6; border:2px solid #D8D2C6"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">50%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:28px; font-weight:700; color:#151513">&#8235;Pinstripe הומוזיגוט × רגיל&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:90px"></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Pinstripe</p></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#E3A83B; text-align:center">Pinstripe</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Pinstripe</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Pinstripe</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Pinstripe</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:30px; font-weight:700; color:#151513; text-align:center">Pinstripe</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">100%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Pinstripe</p></div>
+</div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="complex" data-transition="fade" style="background:#E3A83B; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; justify-content:space-between; gap:48px">
+<div style="display:flex; flex-direction:column; gap:20px">
+<p style="font-size:24px; font-weight:700; color:#151513">&#8235;קומפלקסים&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:96px; font-weight:900; line-height:1.1; color:#151513">&#8235;קומפלקס: כמה גנים שמתחרים על אותו מקום&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:48px">
+<div style="flex:1; border-top:5px solid #151513; padding:24px 0px 0px 0px; display:flex; flex-direction:column; gap:10px">
+<h3 style="font-size:36px; font-weight:700; color:#151513">&#8235;רק שני מקומות&#8236;</h3>
+<p style="font-size:28px; line-height:1.45; color:#151513">&#8235;לכל נחש יש שני מקומות לגן הזה: אחד מהאב ואחד מהאם&#8236;</p>
+</div>
+<div style="flex:1; border-top:5px solid #151513; padding:24px 0px 0px 0px; display:flex; flex-direction:column; gap:10px">
+<h3 style="font-size:36px; font-weight:700; color:#151513">&#8235;לשילוב יש שם&#8236;</h3>
+<p style="font-size:28px; line-height:1.45; color:#151513">&#8235;שני גנים שונים מאותו קומפלקס יוצרים מורף חדש, כמו BEL או Highway&#8236;</p>
+</div>
+<div style="flex:1; border-top:5px solid #151513; padding:24px 0px 0px 0px; display:flex; flex-direction:column; gap:10px">
+<h3 style="font-size:36px; font-weight:700; color:#151513">&#8235;הזוג מתפצל&#8236;</h3>
+<p style="font-size:28px; line-height:1.45; color:#151513">&#8235;כל צאצא מקבל רק אחד מהשניים. השילוב לא עובר כמו שהוא לצאצא&#8236;</p>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="complex-bel" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;קומפלקסים · BEL&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;קומפלקס ה־BEL&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:64px; align-items:start">
+<div style="width:620px; display:flex; flex-direction:column; gap:28px">
+<p style="font-size:30px; line-height:1.5; color:#151513">&#8235;Mojave, Lesser, Butter, Russo, Phantom ו־Mystic יושבים כולם על אותו מקום. רוב השילובים של שניים מהם נותנים Blue Eyed Leucistic (BEL): נחש לבן לגמרי עם עיניים כחולות&#8236;</p>
+<div style="background:#151513; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:12px">
+<h3 style="font-size:32px; font-weight:700; color:#E3A83B">&#8235;BEL × רגיל&#8236;</h3>
+<p style="font-size:28px; line-height:1.5; color:#F3F0E9">&#8235;זיווג של Mojave Lesser עם נחש רגיל נותן &#8295;50% Mojave&#8297; ו־&#8295;50% Lesser&#8297;. אף צאצא לא יוצא BEL&#8236;</p>
+</div>
+</div>
+<table style="flex:1; font-size:28px; color:#151513">
+<tr style="background:#151513"><th style="width:45%; text-align:right; color:#E3A83B">&#8235;התוצאה&#8236;</th><th style="width:55%; text-align:right; color:#F3F0E9">&#8235;השילוב&#8236;</th></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right"><b>Blue Eyed Leucistic</b></td><td style="text-align:right">Mojave + Mojave</td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right"><b>Blue Eyed Leucistic</b></td><td style="text-align:right">Lesser + Lesser</td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right"><b>Blue Eyed Leucistic</b></td><td style="text-align:right">Mojave + Lesser</td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right"><b>Blue Eyed Leucistic</b></td><td style="text-align:right">Butter + Mojave</td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right"><b>Purple Passion</b></td><td style="text-align:right">Phantom + Mojave</td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right"><b>Mystic Potion</b></td><td style="text-align:right">Mystic + Mojave</td></tr>
+</table>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="complex-yb" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;קומפלקסים · Yellow Belly&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;קומפלקס ה־Yellow Belly&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:64px; align-items:start">
+<div style="width:620px; display:flex; flex-direction:column; gap:28px">
+<p style="font-size:30px; line-height:1.5; color:#151513">&#8235;Yellow Belly, Gravel, Asphalt, Specter ו־Spark יושבים על אותו מקום. לכל שילוב של Yellow Belly עם אחד מהם יש שם משלו&#8236;</p>
+<div style="background:#151513; border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:12px">
+<h3 style="font-size:32px; font-weight:700; color:#E3A83B">&#8235;הגנים החלשים והחזקים&#8236;</h3>
+<p style="font-size:28px; line-height:1.5; color:#F3F0E9">&#8235;Gravel ו־Asphalt משנים את הצבע והדוגמה בעדינות. Specter ו־Spark חזקים יותר ונותנים פסים לאורך הגב&#8236;</p>
+</div>
+</div>
+<table style="flex:1; font-size:28px; color:#151513">
+<tr style="background:#151513"><th style="width:45%; text-align:right; color:#E3A83B">&#8235;התוצאה&#8236;</th><th style="width:55%; text-align:right; color:#F3F0E9">&#8235;השילוב&#8236;</th></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right"><b>Ivory</b></td><td style="text-align:right">Yellow Belly + Yellow Belly</td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right"><b>Highway</b></td><td style="text-align:right">Yellow Belly + Gravel</td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right"><b>Freeway</b></td><td style="text-align:right">Yellow Belly + Asphalt</td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right"><b>Super Stripe</b></td><td style="text-align:right">Yellow Belly + Specter</td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right"><b>Puma</b></td><td style="text-align:right">Yellow Belly + Spark</td></tr>
+</table>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="complex-grid" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;קומפלקסים · ריבוע פאנט&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;מה יוצא מ־Highway&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; justify-content:space-between">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:28px; font-weight:700; color:#151513">&#8235;Highway × רגיל&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:90px"></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Yellow Belly</p></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Gravel</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Yellow Belly</p></div>
+<div style="width:220px; height:130px; background:#D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Gravel</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Yellow Belly</p></div>
+<div style="width:220px; height:130px; background:#D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Gravel</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">50%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Yellow Belly</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#D8D2C6"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">50%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Gravel</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; border:2px dashed #9C968A"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#5A564E; text-align:center">0%</p><p style="font-size:24px; font-weight:600; color:#5A564E; text-align:center">Highway</p></div>
+</div>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:28px; font-weight:700; color:#151513">&#8235;Highway × Yellow Belly&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:90px"></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Yellow Belly</p></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Gravel</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Yellow Belly</p></div>
+<div style="width:220px; height:130px; background:#151513; border:3px solid #E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#E3A83B; text-align:center">Ivory</p></div>
+<div style="width:220px; height:130px; background:#151513; border:3px solid #E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#E3A83B; text-align:center">Highway</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;רגיל&#8236;</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Yellow Belly</p></div>
+<div style="width:220px; height:130px; background:#D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Gravel</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#151513"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#E3A83B; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#E3A83B; text-align:center">Ivory</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#151513"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#E3A83B; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#E3A83B; text-align:center">Highway</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">YB</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#D8D2C6"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Gravel</p></div>
+</div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="crypton" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;קומפלקסים · רצסיביים&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;מה זה Crypton&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:96px; align-items:start">
+<div style="flex:1; display:flex; flex-direction:column; gap:28px">
+<p style="font-size:30px; line-height:1.5; color:#151513">&#8235;הגנים Clown ו־Cryptic הם שני גנים רצסיביים שיושבים על אותו מקום. נחש עם עותק אחד מכל אחד נקרא Crypton, והוא נראה שונה מנחש רגיל, למרות שהוא רק הט לשני הגנים&#8236;</p>
+<div style="background:#151513; border-radius:20px; padding:32px 36px; display:flex; flex-direction:column; gap:10px">
+<h3 style="font-size:32px; font-weight:700; color:#E3A83B">&#8235;ומה עם נחש רגיל?&#8236;</h3>
+<p style="font-size:28px; line-height:1.5; color:#F3F0E9">&#8235;זיווג של Crypton עם נחש רגיל נותן &#8295;50% הט Clown&#8297; ו־&#8295;50% הט Cryptic&#8297;. כל הצאצאים נראים רגילים&#8236;</p>
+</div>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:28px; font-weight:700; color:#151513">Crypton × Crypton</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:90px"></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Clown</p></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Cryptic</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Clown</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Clown</p></div>
+<div style="width:220px; height:130px; background:#151513; border:3px solid #E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#E3A83B; text-align:center">Crypton</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Cryptic</p></div>
+<div style="width:220px; height:130px; background:#151513; border:3px solid #E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#E3A83B; text-align:center">Crypton</p></div>
+<div style="width:220px; height:130px; background:#D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Cryptic</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Clown</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#151513"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#E3A83B; text-align:center">50%</p><p style="font-size:24px; font-weight:600; color:#E3A83B; text-align:center">Crypton</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#D8D2C6"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Cryptic</p></div>
+</div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="combos" data-transition="fade" style="background:#0D0D0C; color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#E3A83B">&#8235;קומבואים&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#F3F0E9">&#8235;קומבו: גנים ממקומות שונים&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:64px; align-items:start">
+<div style="width:640px; display:flex; flex-direction:column; gap:24px">
+<div style="background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:column; gap:10px; border-right:8px solid #E3A83B">
+<h3 style="font-size:32px; font-weight:700; color:#E3A83B">&#8235;קומבו&#8236;</h3>
+<p style="font-size:28px; line-height:1.5; color:#F3F0E9">&#8235;כל גן יושב במקום אחר, ולכן אפשר לערום כמה גנים שרוצים באותו נחש&#8236;</p>
+</div>
+<div style="background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:column; gap:10px; border-right:8px solid #6E6A62">
+<h3 style="font-size:32px; font-weight:700; color:#B9B4AA">&#8235;קומפלקס&#8236;</h3>
+<p style="font-size:28px; line-height:1.5; color:#F3F0E9">&#8235;הגנים על אותו מקום, ולכן יש מקום רק לשניים&#8236;</p>
+</div>
+<p style="font-size:28px; line-height:1.5; color:#B9B4AA">&#8235;לכן זיווג של Bumblebee עם נחש רגיל עדיין נותן &#8295;25% Bumblebee&#8297;, וזיווג של Highway עם נחש רגיל לא נותן אף Highway&#8236;</p>
+</div>
+<table style="flex:1; font-size:28px; color:#F3F0E9">
+<tr style="background:#E3A83B"><th style="width:58%; text-align:right; color:#151513">&#8235;הגנים&#8236;</th><th style="width:42%; text-align:right; color:#151513">&#8235;הקומבו&#8236;</th></tr>
+<tr style="background:#1B1A18"><td style="text-align:right">Pastel + Spider</td><td style="text-align:right"><b>Bumblebee</b></td></tr>
+<tr style="background:#0D0D0C"><td style="text-align:right">Super Pastel + Spider</td><td style="text-align:right"><b>Killer Bee</b></td></tr>
+<tr style="background:#1B1A18"><td style="text-align:right">Pastel + Cinnamon</td><td style="text-align:right"><b>Pewter</b></td></tr>
+<tr style="background:#0D0D0C"><td style="text-align:right">Pastel + Fire</td><td style="text-align:right"><b>Firefly</b></td></tr>
+<tr style="background:#1B1A18"><td style="text-align:right">Pastel + Pinstripe</td><td style="text-align:right"><b>Lemon Blast</b></td></tr>
+<tr style="background:#0D0D0C"><td style="text-align:right">Spider + Pinstripe</td><td style="text-align:right"><b>Spinner</b></td></tr>
+<tr style="background:#1B1A18"><td style="text-align:right">Pastel + Mojave</td><td style="text-align:right"><b>Pastave</b></td></tr>
+<tr style="background:#0D0D0C"><td style="text-align:right">Leopard + Spotnose + Clown</td><td style="text-align:right"><b>Batman</b></td></tr>
+</table>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; mix-blend-mode:screen">
+</section>
+<section id="combo-grid" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;קומבואים · חישוב&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;מחשבים כל גן לחוד, ומכפילים&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:96px; align-items:start">
+<div style="flex:1; display:flex; flex-direction:column; gap:24px">
+<div style="background:#FBFAF6; border-radius:20px; padding:32px 36px; display:flex; flex-direction:column; gap:12px; border-right:8px solid #E3A83B">
+<h3 style="font-size:32px; font-weight:700; color:#151513">&#8235;Pastel Clown × הט Clown&#8236;</h3>
+<p style="font-size:28px; line-height:1.5; color:#5A564E">&#8235;Pastel: 50% · Clown: 50%&#8236;</p>
+<p style="font-size:30px; font-weight:700; color:#151513">&#8235;Pastel Clown = 50% × 50% = 25%&#8236;</p>
+</div>
+<div style="background:#FBFAF6; border-radius:20px; padding:32px 36px; display:flex; flex-direction:column; gap:12px; border-right:8px solid #E3A83B">
+<h3 style="font-size:32px; font-weight:700; color:#151513">Batman × Clown</h3>
+<p style="font-size:28px; line-height:1.5; color:#5A564E">&#8235;Leopard: 50% · Spotnose: 50% · Clown: 100%&#8236;</p>
+<p style="font-size:30px; font-weight:700; color:#151513">&#8235;Batman = 50% × 50% × 100% = 25%&#8236;</p>
+</div>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:28px; font-weight:700; color:#151513">&#8235;Bumblebee × רגיל&#8236;</p>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:90px"></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Pastel</p></div>
+<div style="width:220px; height:90px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;בלי Pastel&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#E3A83B; text-align:center">Spider</p></div>
+<div style="width:220px; height:130px; background:#151513; border:3px solid #E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#E3A83B; text-align:center">Bumblebee</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Spider</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="width:220px; height:130px; background:#151513; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#F3F0E9; text-align:center">&#8235;בלי Spider&#8236;</p></div>
+<div style="width:220px; height:130px; background:#E3A83B; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:700; color:#151513; text-align:center">Pastel</p></div>
+<div style="width:220px; height:130px; background:#FBFAF6; border:2px solid #D8D2C6; border-radius:12px; display:flex; align-items:center; justify-content:center"><p style="font-size:28px; font-weight:600; color:#151513; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+<div style="display:flex; flex-direction:row-reverse; gap:12px">
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#151513"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#E3A83B; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#E3A83B; text-align:center">Bumblebee</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Pastel</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#E3A83B"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">Spider</p></div>
+<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:12px; background:#FBFAF6; border:2px solid #D8D2C6"><p style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:40px; font-weight:800; line-height:1; color:#151513; text-align:center">25%</p><p style="font-size:24px; font-weight:600; color:#151513; text-align:center">&#8235;רגיל&#8236;</p></div>
+</div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="danger" data-transition="fade" style="background:#0D0D0C; color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#E3A83B">&#8235;זהירות&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#F3F0E9">&#8235;שילובים שחייבים להכיר לפני שמזווגים&#8236;</h2>
+</div>
+<div style="display:flex; flex-direction:row-reverse; flex-wrap:wrap; gap:32px">
+<div style="width:816px; background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:row-reverse; gap:24px; align-items:start">
+<svg aria-label="אזהרה" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px"><h3 style="font-size:32px; font-weight:700; color:#F3F0E9">Spider × Spider</h3><p style="font-size:26px; line-height:1.45; color:#B9B4AA">&#8235;לא מוכר Super Spider מאומת, ולכל ה־Spider יש וובל. לא כדאי לזווג שני Spider&#8236;</p></div>
+</div>
+<div style="width:816px; background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:row-reverse; gap:24px; align-items:start">
+<svg aria-label="אזהרה" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px"><h3 style="font-size:32px; font-weight:700; color:#F3F0E9">Champagne × Champagne</h3><p style="font-size:26px; line-height:1.45; color:#B9B4AA">&#8235;ה־Super Champagne קטלני. רבע מהביצים צפויות לא לשרוד&#8236;</p></div>
+</div>
+<div style="width:816px; background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:row-reverse; gap:24px; align-items:start">
+<svg aria-label="אזהרה" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px"><h3 style="font-size:32px; font-weight:700; color:#F3F0E9">Hidden Gene Woma × HGW</h3><p style="font-size:26px; line-height:1.45; color:#B9B4AA">&#8235;הסופר מדווח כקטלני או עם בעיות נוירולוגיות קשות&#8236;</p></div>
+</div>
+<div style="width:816px; background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:row-reverse; gap:24px; align-items:start">
+<svg aria-label="אזהרה" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px"><h3 style="font-size:32px; font-weight:700; color:#F3F0E9">Super Cinnamon · Super Black Pastel</h3><p style="font-size:26px; line-height:1.45; color:#B9B4AA">&#8235;ידועים בנטייה לקינקים בעמוד השדרה ולאף שטוח (Duckbill)&#8236;</p></div>
+</div>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; mix-blend-mode:screen">
+</section>
+<section id="summary" data-transition="fade" style="background:#F3F0E9; color:#151513; font-family:'Rubik', Arial, sans-serif; text-align:right; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-size:24px; font-weight:600; color:#8A5A0E">&#8235;סיכום&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:72px; font-weight:800; line-height:1.1; color:#151513">&#8235;הכול בטבלה אחת&#8236;</h2>
+</div>
+<table style="font-size:28px; color:#151513">
+<tr style="background:#151513"><th style="width:14%; text-align:right; color:#F3F0E9">&#8235;דוגמה&#8236;</th><th style="width:26%; text-align:right; color:#F3F0E9">&#8235;ויזואל × רגיל&#8236;</th><th style="width:22%; text-align:right; color:#F3F0E9">&#8235;שני עותקים&#8236;</th><th style="width:20%; text-align:right; color:#F3F0E9">&#8235;עותק אחד&#8236;</th><th style="width:18%; text-align:right; color:#E3A83B">&#8235;סוג&#8236;</th></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">Clown</td><td style="text-align:right">&#8235;100% הט&#8236;</td><td style="text-align:right">&#8235;ויזואל&#8236;</td><td style="text-align:right">&#8235;נראה רגיל (הט)&#8236;</td><td style="text-align:right"><b>&#8235;רצסיבי&#8236;</b></td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right">Pastel</td><td style="text-align:right">&#8235;50% ויזואל&#8236;</td><td style="text-align:right">&#8235;סופר, נראה אחרת&#8236;</td><td style="text-align:right">&#8235;ויזואל&#8236;</td><td style="text-align:right"><b>&#8235;קו־דומיננטי&#8236;</b></td></tr>
+<tr style="background:#FBFAF6"><td style="text-align:right">Pinstripe</td><td style="text-align:right">&#8235;50%, מהומוזיגוט 100%&#8236;</td><td style="text-align:right">&#8235;נראה אותו דבר&#8236;</td><td style="text-align:right">&#8235;ויזואל&#8236;</td><td style="text-align:right"><b>&#8235;דומיננטי&#8236;</b></td></tr>
+<tr style="background:#F3F0E9"><td style="text-align:right">Highway</td><td style="text-align:right">&#8235;50% לכל אחד מהגנים, 0% מהשילוב&#8236;</td><td style="text-align:right">&#8235;שילוב עם שם משלו&#8236;</td><td style="text-align:right">&#8235;ויזואל של גן אחד&#8236;</td><td style="text-align:right"><b>&#8235;קומפלקס&#8236;</b></td></tr>
+</table>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; filter:invert(1); mix-blend-mode:multiply">
+</section>
+<section id="closing" data-transition="fade" style="background:radial-gradient(circle at 50% 42%, #26241F 0%, #0D0D0C 62%); color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:center; padding:128px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:40px">
+<img src="logo.jpg" alt="הלוגו של RIL Ball Pythons" style="width:700px; height:496px; object-fit:contain; mix-blend-mode:screen">
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:96px; font-weight:800; line-height:1.1; color:#F3F0E9; text-align:center">&#8235;שאלות?&#8236;</h2>
+</section>
+</div></div></div>
+<nav>
+  <button id="prev" type="button" aria-label="השקף הקודם">→</button>
+  <span id="count"></span>
+  <button id="next" type="button" aria-label="השקף הבא">←</button>
+  <button id="full" type="button" aria-label="מסך מלא">⤢</button>
+</nav>
+<div id="hint">בטלפון כדאי לסובב את המסך לרוחב</div>
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('#deck > section'));
+  var frame = document.getElementById('frame'), deck = document.getElementById('deck'), stage = document.getElementById('stage');
+  var i = 0;
+  function fit() {
+    var w = stage.clientWidth, h = stage.clientHeight, s = Math.min(w / 1920, h / 1080);
+    frame.style.width = Math.floor(1920 * s) + 'px'; frame.style.height = Math.floor(1080 * s) + 'px';
+    deck.style.transform = 'scale(' + s + ')';
+  }
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (el, k) { el.classList.toggle('on', k === i); });
+    document.getElementById('count').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('prev').disabled = i === 0;
+    document.getElementById('next').disabled = i === slides.length - 1;
+    try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) {}
+  }
+  document.getElementById('next').onclick = function () { show(i + 1); };
+  document.getElementById('prev').onclick = function () { show(i - 1); };
+  document.getElementById('full').onclick = function () {
+    var d = document.documentElement;
+    if (document.fullscreenElement) { document.exitFullscreen(); }
+    else if (d.requestFullscreen) { d.requestFullscreen().catch(function () {}); }
+  };
+  // Hebrew reads right to left: the left arrow moves forward
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(i + 1); }
+    else if (e.key === 'ArrowRight' || e.key === 'PageUp') { e.preventDefault(); show(i - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+  });
+  // swipe: finger moving to the right brings the next slide, like turning a Hebrew page
+  var sx = null, sy = null;
+  stage.addEventListener('touchstart', function (e) { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, { passive: true });
+  stage.addEventListener('touchend', function (e) {
+    if (sx == null) return;
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) show(dx > 0 ? i + 1 : i - 1);
+  }, { passive: true });
+  stage.addEventListener('click', function (e) { var r = stage.getBoundingClientRect(); show(e.clientX < r.left + r.width / 2 ? i + 1 : i - 1); });
+  window.addEventListener('resize', fit);
+  var hint = document.getElementById('hint');
+  function hintCheck() { hint.style.opacity = (window.innerHeight > window.innerWidth && window.innerWidth < 700) ? '1' : '0'; }
+  window.addEventListener('resize', hintCheck); hintCheck();
+  var start = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+</body>
+</html>
