@@ -328,6 +328,7 @@
   .sprice { font: 900 1.5rem var(--serif); color: var(--amber); }
   .sfoot .btn { min-height: 38px; padding: 6px 14px; font-size: .85rem; }
   body.customer .nav, body.customer .cornerlogo { display: none; }
+  .shoplinkbox { margin-bottom: 12px; }
   .custexit { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 10px; z-index: 50; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: rgba(0,0,0,.5); color: var(--muted); font-size: .9rem; opacity: .6; }
   .selbar .btn { padding: 8px 12px; }
 
@@ -2858,6 +2859,7 @@ var qrcode = function() {
       cloud.error = tooBig ? 'too_large' : '';
       if (tooBig && !cloud.toasted) { cloud.toasted = true; toast('כרטיס או תמונה גדולים מדי לענן ולא סונכרנו'); }
       if (!cloud.dirty) setPending(false);
+      shopSync();
     } catch (e) {
       cloud.error = (e && e.code) || 'error'; cloud.dirty = true;
       if (!cloud.toasted) { cloud.toasted = true; toast('הסנכרון לענן נכשל. הנתונים שמורים במכשיר ויסונכרנו בהמשך'); }
@@ -2889,6 +2891,51 @@ var qrcode = function() {
   }
   // ---- Firebase (Google) mode: used when the page is hosted on its own address and the Firebase scripts loaded ----
   var FB_CFG = { apiKey: 'AIzaSyAhHHuHhcMuiDZAnxR6LlyHporQJCn6bUw', authDomain: 'ril-ball-pythons.firebaseapp.com', projectId: 'ril-ball-pythons', storageBucket: 'ril-ball-pythons.firebasestorage.app', messagingSenderId: '31867361524', appId: '1:31867361524:web:c5c2063da8cc6cfb4ee6a1' };
+  /* ---------- public catalog: a copy of ONLY the snakes marked "for sale", readable by anyone with the link ----------
+     Firestore: shops/{uid} (title, count, updated) and shops/{uid}/items/{snakeId}. Nothing else is ever copied there. */
+  function shopItems() {
+    var out = {};
+    db.snakes.filter(function (s) { return s.status === 'forsale'; }).forEach(function (s) {
+      var ph = ((s.photos && s.photos.length) ? s.photos : (s.photo ? [s.photo] : [])).slice(0, 4);
+      out[s.id] = { id: s.id, code: s.code || '', name: s.name || '', sex: s.sex || '', species: s.species || '', genes: s.genes || [], morph: morphNames(s.genes),
+        hatch: s.hatch || '', weight: s.weight || '', price: Number(s.salePrice) > 0 ? Number(s.salePrice) : 0, photos: ph, sort: s.hatch || s.createdAt || '' };
+    });
+    return out;
+  }
+  function shopUrl() { return cloud.uid ? location.origin + location.pathname.replace(/[^\/]*$/, '') + 'shop/?u=' + encodeURIComponent(cloud.uid) : ''; }
+  async function shopSync() {
+    if (!cloud.fb || !cloud.on || !cloud.uid || cloud.shopBusy) return;
+    cloud.shopBusy = true;
+    try {
+      var base = cloud.db.collection('shops').doc(cloud.uid), items = base.collection('items');
+      if (!cloud.shopLast) { // first time on this device: find what is already published, so snakes no longer for sale are removed
+        cloud.shopLast = {};
+        var got = await items.get();
+        got.docs.forEach(function (x) { cloud.shopLast[x.id] = '?'; });
+      }
+      var want = shopItems(), changed = false;
+      for (var id in want) {
+        var json = JSON.stringify(want[id]);
+        if (cloud.shopLast[id] === json) continue;
+        if (json.length > 900000) { want[id].photos = want[id].photos.slice(0, 1); json = JSON.stringify(want[id]); }
+        await items.doc(id).set(JSON.parse(json)); cloud.shopLast[id] = json; changed = true;
+      }
+      for (var old in cloud.shopLast) { if (!(old in want)) { await items.doc(old).delete(); delete cloud.shopLast[old]; changed = true; } }
+      if (changed || !cloud.shopMeta) { await base.set({ title: 'RIL Ball Pythons', count: Object.keys(want).length, updated: new Date().toISOString() }); cloud.shopMeta = true; }
+      cloud.shopErr = '';
+    } catch (e) {
+      cloud.shopErr = (e && e.code) || 'error'; cloud.shopLast = null;
+    }
+    cloud.shopBusy = false;
+    if (ui.tab === 'shop') renderPage();
+  }
+  function copyShopLink() {
+    var url = shopUrl();
+    if (!url) return toast('הקישור זמין אחרי כניסה לחשבון');
+    shopSync();
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast('הקישור הועתק. אפשר לשלוח אותו ללקוחות'); })
+      .catch(function () { window.prompt('העתיקו את הקישור:', url); });
+  }
   // changes made with no internet: note what the cloud holds now (so deletions are sent too), then upload this device's data
   async function cloudPushLocal() {
     var s = await fbBase().get();
@@ -2902,6 +2949,7 @@ var qrcode = function() {
     return (pushing ? cloudPushLocal() : cloudLoad()).then(function (how) {
       cloud.on = true; cloud.error = '';
       if (how === 'uploaded' || how === 'pushed') { cloudSync(); toast(how === 'pushed' ? 'השינויים ששמרתם במכשיר עלו לענן' : 'הנתונים הועלו לענן'); }
+      else shopSync();
       renderPage();
     });
   }
@@ -4799,7 +4847,13 @@ var qrcode = function() {
   function shopView() {
     var all = db.snakes.filter(function (s) { return s.status === 'forsale'; }), list = shopSnakes();
     var h = '<div class="shophead"><img src="' + LOGO + '" alt="RIL Ball Pythons"><div><h1 class="title">זמינים למכירה</h1><p class="sub">' + (all.length ? all.length + (all.length === 1 ? ' נחש זמין' : ' נחשים זמינים') : 'RIL Ball Pythons') + '</p></div></div>';
-    if (!ui.customer) h += '<div class="row" style="margin-bottom:12px"><button class="btn btn-primary" type="button" data-act="customer">תצוגה ללקוח</button><button class="btn btn-soft" type="button" data-act="shareshop">שיתוף הרשימה</button></div>';
+    if (!ui.customer) {
+      h += '<div class="shoplinkbox"><button class="btn btn-primary wide" type="button" data-act="copyshoplink">🔗 העתקת קישור ללקוחות</button>' +
+        '<p class="hint" style="margin-top:6px">הלקוח רואה רק את הנחשים שמסומנים "למכירה". בלי כניסה, ובלי גישה לשום דבר אחר באפליקציה. כל שינוי כאן מתעדכן בקישור לבד.</p>' +
+        (cloud.shopErr === 'permission-denied' ? '<div class="warnbox red"><p>הקישור עוד לא פעיל: צריך לעדכן פעם אחת את כללי האבטחה ב־Firebase כדי לאפשר את הקטלוג הציבורי.</p></div>' : cloud.shopErr ? '<p class="note" style="color:var(--amber)">העדכון של הקישור לא הצליח כרגע. ננסה שוב בשינוי הבא.</p>' : '') +
+        (!cloud.fb ? '<p class="note">הקישור זמין רק באתר, אחרי כניסה לחשבון.</p>' : '') + '</div>';
+      h += '<div class="row" style="margin-bottom:12px"><button class="btn btn-soft" type="button" data-act="customer">תצוגה ללקוח</button><button class="btn btn-soft" type="button" data-act="shareshop">שיתוף כטקסט</button></div>';
+    }
     if (!all.length) return h + '<div class="empty"><h3>אין כרגע נחשים למכירה</h3><p>כדי שנחש יופיע כאן, בוחרים בכרטיס שלו את הסטטוס "למכירה" ומוסיפים מחיר.</p>' + (ui.customer ? '' : '<button class="btn btn-soft" type="button" data-act="tab" data-tab="collection">לאוסף</button>') + '</div>';
     h += '<div class="chips">' + [['', 'הכל'], ['male', 'זכרים ♂'], ['female', 'נקבות ♀']].map(function (c) { return '<button class="chip' + ((ui.shopSex || '') === c[0] ? ' on' : '') + '" type="button" data-act="shopsex" data-v="' + c[0] + '">' + c[1] + '</button>'; }).join('') +
       [['new', 'צעירים קודם'], ['price', 'לפי מחיר']].map(function (c) { return '<button class="chip' + ((ui.shopSort || 'new') === c[0] ? ' on' : '') + '" type="button" data-act="shopsort" data-v="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>';
@@ -4922,7 +4976,8 @@ var qrcode = function() {
       case 'toggleselect': ui.select = !ui.select; ui.sel = {}; renderPage(); break;
       case 'tsel': ui.sel[id] = !ui.sel[id]; renderPage(); break;
       case 'selall': filteredSnakes().forEach(function (s) { ui.sel[s.id] = true; }); renderPage(); break;
-      case 'goshop': ui.tab = 'shop'; ui.customer = false; hideSug(); renderPage(); window.scrollTo(0, 0); break;
+      case 'goshop': ui.tab = 'shop'; ui.customer = false; hideSug(); renderPage(); window.scrollTo(0, 0); shopSync(); break;
+      case 'copyshoplink': copyShopLink(); break;
       case 'customer': ui.customer = !ui.customer; document.body.classList.toggle('customer', ui.customer); renderPage(); window.scrollTo(0, 0); break;
       case 'shareshop': shareShop(); break;
       case 'shopsex': ui.shopSex = el.dataset.v; renderPage(); break;

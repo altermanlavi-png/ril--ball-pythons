@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>RIL Ball Pythons · זמינים למכירה</title>
+<meta name="description" content="פיתונים מתכדרים זמינים למכירה מ־RIL Ball Pythons">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RIL Ball Pythons">
+<meta property="og:title" content="RIL Ball Pythons · זמינים למכירה">
+<meta property="og:description" content="פיתונים מתכדרים זמינים למכירה: תמונות, גנטיקה ומחירים">
+<meta property="og:image" content="https://altermanlavi-png.github.io/ril--ball-pythons/shop/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="../icon-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+  :root { color-scheme: dark; --bg: #000; --surface: #0e0e0e; --surface2: #181818; --line: #2a2a2a; --text: #F5F5F5; --muted: #ababab; --amber: #E3A83B; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 400 16px/1.5 'Rubik', -apple-system, 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: url(../genetics/logo.jpg) center 40% / min(96vw, 780px) auto no-repeat; filter: blur(11px); opacity: .22; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: calc(18px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 14px; padding: 8px 0 18px; }
+  header img { width: 92px; height: auto; mix-blend-mode: screen; flex: none; }
+  h1 { margin: 0; font: 900 1.9rem/1.1 'Frank Ruhl Libre', Georgia, serif; }
+  .sub { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+  .chip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 7px 14px; font-size: .85rem; }
+  .chip.on { background: var(--text); border-color: var(--text); color: #000; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 560px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .card { background: rgba(14,14,14,.92); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
+  .pic { position: relative; width: 100%; aspect-ratio: 4 / 3; background: var(--surface2); border: 0; padding: 0; display: block; }
+  .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pic .more { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: .75rem; padding: 3px 9px; border-radius: 999px; }
+  .pic.empty { display: flex; align-items: center; justify-content: center; }
+  .pic.empty img { width: 40%; height: auto; opacity: .35; mix-blend-mode: screen; }
+  .body { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .top { display: flex; align-items: center; gap: 8px; font-size: 1.15rem; font-weight: 700; }
+  .sex { color: var(--muted); font-weight: 600; }
+  .morph { color: var(--amber); font-weight: 700; font-size: .92rem; direction: ltr; text-align: right; }
+  .genes { display: flex; flex-wrap: wrap; gap: 5px 6px; direction: ltr; justify-content: flex-end; }
+  .g { background: rgba(255,255,255,.12); border-radius: 999px; padding: 3px 10px; font-size: .8rem; font-weight: 600; }
+  .meta { color: var(--muted); font-size: .85rem; }
+  .price { font: 900 1.55rem 'Frank Ruhl Libre', Georgia, serif; color: var(--amber); margin-top: 4px; }
+  .ask { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+  .empty-state, .msg { text-align: center; color: var(--muted); padding: 50px 16px; }
+  .empty-state h2 { color: var(--text); font: 800 1.3rem 'Frank Ruhl Libre', Georgia, serif; margin: 0 0 6px; }
+  footer { text-align: center; color: #6f6f6f; font-size: .8rem; margin-top: 28px; }
+  /* photo viewer */
+  #viewer { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.94); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; }
+  #viewer.on { display: flex; }
+  #viewer .big { max-width: 100%; max-height: 72vh; border-radius: 12px; object-fit: contain; }
+  #viewer .thumbs { display: flex; gap: 8px; overflow-x: auto; max-width: 100%; }
+  #viewer .thumbs img { width: 60px; height: 60px; object-fit: cover; border-radius: 10px; border: 2px solid transparent; cursor: pointer; }
+  #viewer .thumbs img.on { border-color: var(--amber); }
+  #viewer .x { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; width: 42px; height: 42px; border-radius: 50%; border: 1px solid #444; background: rgba(0,0,0,.5); font-size: 1rem; }
+  #viewer .cap { color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><img src="../genetics/logo.jpg" alt="RIL Ball Pythons"><div><h1>זמינים למכירה</h1><p class="sub" id="count">RIL Ball Pythons</p></div></header>
+  <div class="chips" id="chips" hidden></div>
+  <div id="list"><p class="msg">טוען…</p></div>
+  <footer>RIL Ball Pythons</footer>
+</div>
+<div id="viewer" role="dialog" aria-modal="true" aria-label="תמונות"><button class="x" type="button" id="vclose" aria-label="סגירה">✕</button><img class="big" id="vbig" alt=""><div class="cap" id="vcap"></div><div class="thumbs" id="vthumbs"></div></div>
+<script>
+(function () {
+  'use strict';
+  // read-only: this page can see nothing but the public for-sale copy the owner's app publishes (shops/{uid}/items)
+  var CFG = { apiKey: 'AIzaSyAhHHuHhcMuiDZAnxR6LlyHporQJCn6bUw', authDomain: 'ril-ball-pythons.firebaseapp.com', projectId: 'ril-ball-pythons', storageBucket: 'ril-ball-pythons.firebasestorage.app', messagingSenderId: '31867361524', appId: '1:31867361524:web:c5c2063da8cc6cfb4ee6a1' };
+  var items = [], sexF = '', sortF = 'new';
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function sexSym(x) { return x === 'male' ? '♂' : x === 'female' ? '♀' : ''; }
+  function age(hatch) {
+    if (!hatch) return '';
+    var p = String(hatch).split('-').map(Number), b = new Date(p[0], p[1] - 1, p[2]), n = new Date();
+    if (b > n) return '';
+    var m = (n.getFullYear() - b.getFullYear()) * 12 + n.getMonth() - b.getMonth(); if (n.getDate() < b.getDate()) m--;
+    function pl(k, one, two, many) { return k === 1 ? one : k === 2 ? two : k + ' ' + many; }
+    if (m < 1) { var d = Math.max(0, Math.round((n - b) / 86400000)); return pl(d, 'יום', 'יומיים', 'ימים'); }
+    var y = Math.floor(m / 12), r = m % 12;
+    return (y ? pl(y, 'שנה', 'שנתיים', 'שנים') + (r ? ' ו' : '') : '') + (r ? pl(r, 'חודש', 'חודשיים', 'חודשים') : '');
+  }
+  function card(s, i) {
+    var ph = s.photos || [], meta = [s.sex === 'male' ? 'זכר' : s.sex === 'female' ? 'נקבה' : '', age(s.hatch) ? 'גיל ' + age(s.hatch) : '', s.weight ? s.weight + ' גרם' : ''].filter(Boolean).join(' · ');
+    return '<div class="card">' +
+      (ph.length ? '<button class="pic" type="button" data-i="' + i + '" aria-label="תמונות של ' + esc(s.name || s.code) + '"><img src="' + ph[0] + '" alt="' + esc(s.name || s.code) + '" loading="lazy">' + (ph.length > 1 ? '<span class="more">' + ph.length + ' תמונות</span>' : '') + '</button>'
+        : '<div class="pic empty"><img src="../genetics/logo.jpg" alt=""></div>') +
+      '<div class="body"><div class="top">' + esc(s.name || s.code) + (sexSym(s.sex) ? ' <span class="sex">' + sexSym(s.sex) + '</span>' : '') + '</div>' +
+      ((s.morph || []).length ? '<div class="morph">' + esc(s.morph.join(', ')) + '</div>' : '') +
+      '<div class="genes">' + ((s.genes || []).length ? s.genes.map(function (g) { return '<span class="g">' + esc(g) + '</span>'; }).join('') : '<span class="g">Normal</span>') + '</div>' +
+      (meta ? '<div class="meta">' + esc(meta) + '</div>' : '') +
+      (s.price > 0 ? '<div class="price">' + Number(s.price).toLocaleString('he-IL') + ' ₪</div>' : '<div class="ask">מחיר לפי פנייה</div>') + '</div></div>';
+  }
+  var shown = [];
+  function render() {
+    shown = items.filter(function (s) { return !sexF || s.sex === sexF; }).sort(function (a, b) {
+      if (sortF === 'price') return (a.price || 1e12) - (b.price || 1e12);
+      return String(b.sort || '').localeCompare(String(a.sort || ''));
+    });
+    document.getElementById('count').textContent = items.length ? items.length + (items.length === 1 ? ' נחש זמין' : ' נחשים זמינים') : 'RIL Ball Pythons';
+    var ch = document.getElementById('chips');
+    ch.hidden = items.length < 2;
+    ch.innerHTML = [['', 'הכל'], ['male', 'זכרים ♂'], ['female', 'נקבות ♀']].map(function (c) { return '<button class="chip' + (sexF === c[0] ? ' on' : '') + '" type="button" data-sex="' + c[0] + '">' + c[1] + '</button>'; }).join('') +
+      [['new', 'צעירים קודם'], ['price', 'לפי מחיר']].map(function (c) { return '<button class="chip' + (sortF === c[0] ? ' on' : '') + '" type="button" data-sort="' + c[0] + '">' + c[1] + '</button>'; }).join('');
+    document.getElementById('list').innerHTML = !items.length
+      ? '<div class="empty-state"><h2>אין כרגע נחשים זמינים</h2><p>חזרו לבדוק בקרוב.</p></div>'
+      : shown.length ? '<div class="grid">' + shown.map(card).join('') + '</div>' : '<p class="msg">אין נחשים שמתאימים לסינון.</p>';
+  }
+  function openViewer(s, k) {
+    var v = document.getElementById('viewer'), ph = s.photos || [];
+    function pick(n) {
+      document.getElementById('vbig').src = ph[n];
+      Array.prototype.forEach.call(document.querySelectorAll('#vthumbs img'), function (im, j) { im.classList.toggle('on', j === n); });
+    }
+    document.getElementById('vcap').textContent = (s.name || s.code) + (s.price > 0 ? ' · ' + Number(s.price).toLocaleString('he-IL') + ' ₪' : '');
+    document.getElementById('vthumbs').innerHTML = ph.length > 1 ? ph.map(function (p, j) { return '<img src="' + p + '" data-j="' + j + '" alt="תמונה ' + (j + 1) + '">'; }).join('') : '';
+    v.classList.add('on'); pick(k || 0);
+    document.getElementById('vthumbs').onclick = function (e) { var t = e.target.closest('img'); if (t) pick(+t.dataset.j); };
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.sex != null) { sexF = b.dataset.sex; render(); }
+    else if (b.dataset.sort) { sortF = b.dataset.sort; render(); }
+    else if (b.classList.contains('pic')) openViewer(shown[+b.dataset.i], 0);
+    else if (b.id === 'vclose') document.getElementById('viewer').classList.remove('on');
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.getElementById('viewer').classList.remove('on'); });
+  var uid = null;
+  try { uid = new URLSearchParams(location.search).get('u'); } catch (e) {}
+  if (!uid || !window.firebase) { document.getElementById('list').innerHTML = '<p class="msg">הקישור לא שלם. בקשו מ־RIL קישור חדש.</p>'; return; }
+  firebase.initializeApp(CFG);
+  firebase.firestore().collection('shops').doc(uid).collection('items').get().then(function (snap) {
+    items = snap.docs.map(function (d) { return d.data(); });
+    render();
+  }).catch(function () {
+    document.getElementById('list').innerHTML = '<p class="msg">לא ניתן לטעון את הרשימה כרגע. נסו שוב בעוד רגע.</p>';
+  });
+})();
+</script>
+</body>
+</html>
