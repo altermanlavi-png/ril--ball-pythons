@@ -4846,7 +4846,7 @@ var qrcode = function() {
   }
   function shopView() {
     var all = db.snakes.filter(function (s) { return s.status === 'forsale'; }), list = shopSnakes();
-    var h = '<div class="shophead"><img src="' + LOGO + '" alt="RIL Ball Pythons"><div><h1 class="title">זמינים למכירה</h1><p class="sub">' + (all.length ? all.length + (all.length === 1 ? ' נחש זמין' : ' נחשים זמינים') : 'RIL Ball Pythons') + '</p></div></div>';
+    var h = '<div class="shophead"><img src="' + LOGO + '" alt="RIL Ball Pythons"><div><h1 class="title">פיתונים מתכדרים זמינים לקנייה</h1><p class="sub">' + (all.length ? all.length + (all.length === 1 ? ' נחש זמין' : ' נחשים זמינים') : 'RIL Ball Pythons') + '</p></div></div>';
     if (!ui.customer) {
       h += '<div class="shoplinkbox"><button class="btn btn-primary wide" type="button" data-act="copyshoplink">🔗 העתקת קישור ללקוחות</button>' +
         '<p class="hint" style="margin-top:6px">הלקוח רואה רק את הנחשים שמסומנים "למכירה". בלי כניסה, ובלי גישה לשום דבר אחר באפליקציה. כל שינוי כאן מתעדכן בקישור לבד.</p>' +
