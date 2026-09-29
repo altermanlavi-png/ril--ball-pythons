@@ -784,7 +784,6 @@
     document.getElementById('count').textContent = (i + 1) + ' / ' + slides.length;
     document.getElementById('prev').disabled = i === 0;
     document.getElementById('next').disabled = i === slides.length - 1;
-    try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) {}
   }
   document.getElementById('next').onclick = function () { show(i + 1); };
   document.getElementById('prev').onclick = function () { show(i - 1); };
@@ -863,8 +862,9 @@
   });
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', function () { setTimeout(layout, 200); });
-  var start = parseInt((location.hash || '').slice(1), 10);
-  layout(); show(isNaN(start) ? 0 : start - 1);
+  // always open on the first slide, whatever address was used
+  try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  layout(); show(0);
 })();
 </script>
 <script>
