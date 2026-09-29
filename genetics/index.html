@@ -9,6 +9,13 @@
 <meta property="og:title" content="RIL — גנטיקה של פיתונים מתכדרים">
 <meta property="og:description" content="רצסיבי · קו־דומיננטי · דומיננטי · קומפלקסים · קומבואים">
 <link rel="icon" href="../icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RIL גנטיקה">
+<meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500..900&family=Rubik:wght@300..700&display=swap" rel="stylesheet">
@@ -35,12 +42,23 @@
   #hint { display: none; position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: rgba(27,26,24,.94); color: #f3f0e9; border: 1px solid #333; padding: 9px 18px; border-radius: 999px; font-size: 15px; direction: rtl; white-space: nowrap; pointer-events: none; }
   body.phone:not(.rot) #hint { display: block; }
   body.phone:not(.rot) #full { background: #E3A83B; color: #151513; border-color: #E3A83B; }
+  /* presentation mode: only the slide; a small corner button goes back */
+  body.pres nav { display: none; }
+  #exit { display: none; position: absolute; top: 10px; left: 10px; z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.45); color: #f3f0e9; font-size: 18px; line-height: 1; cursor: pointer; opacity: .55; }
+  body.pres #exit { display: block; }
+  #tip { display: none; position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.82); align-items: center; justify-content: center; padding: 24px; direction: rtl; }
+  #tip.on { display: flex; }
+  #tip > div { max-width: 360px; background: #1b1a18; color: #f3f0e9; border: 1px solid #333; border-radius: 18px; padding: 22px; font-size: 16px; line-height: 1.55; text-align: right; }
+  #tip b { color: #E3A83B; }
+  #tip ol { margin: 10px 0 16px; padding-right: 20px; }
+  #tip button { width: 100%; height: 44px; border-radius: 12px; border: 0; background: #E3A83B; color: #151513; font: 600 16px 'Rubik', Arial, sans-serif; cursor: pointer; }
   body.rot nav, body.short nav { padding-top: 4px; padding-bottom: 4px; }
   body.rot nav button, body.short nav button { height: 36px; }
 </style>
 </head>
 <body>
 <div id="wrap">
+<button id="exit" type="button" aria-label="יציאה מתצוגת מצגת">✕</button>
 <div id="stage"><div id="frame"><div id="deck">
 <section id="cover" data-transition="fade" style="background:radial-gradient(circle at 50% 38%, #26241F 0%, #0D0D0C 62%); color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:center; padding:128px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:40px">
 <img src="logo.jpg" alt="הלוגו של RIL Ball Pythons" style="width:620px; height:440px; object-fit:contain; mix-blend-mode:screen">
@@ -664,6 +682,12 @@
 </nav>
 </div>
 <div id="hint">לחצו על ⤢ כדי לראות לרוחב</div>
+<div id="tip" role="dialog" aria-modal="true"><div>
+<b>רוצים מסך נקי לגמרי?</b><br>
+הדפדפן לא נותן לדף להסתיר את השורות שלו. אבל אפשר להוסיף את המצגת למסך הבית, ואז היא נפתחת כמו אפליקציה, בלי שום שורה:
+<ol><li>פותחים את הקישור בספארי</li><li>לוחצים על כפתור השיתוף</li><li>בוחרים "הוספה למסך הבית"</li></ol>
+<button id="tipok" type="button">הבנתי</button>
+</div></div>
 <script>
 (function () {
   var slides = Array.prototype.slice.call(document.querySelectorAll('#deck > section'));
@@ -703,6 +727,7 @@
     body.classList.toggle('phone', phone && upright);
     body.classList.toggle('rot', rot);
     body.classList.toggle('short', !rot && H < 500);
+    body.classList.toggle('pres', rot || !!(document.fullscreenElement || document.webkitFullscreenElement));
     if (rot) { wrap.style.width = H + 'px'; wrap.style.height = W + 'px'; wrap.style.left = W + 'px'; }
     else { wrap.style.width = ''; wrap.style.height = ''; wrap.style.left = ''; }
     fit();
@@ -716,9 +741,9 @@
     var p = null;
     try { p = req ? req.call(d) : null; } catch (e) { p = null; }
     if (!phoneUp) return;
-    if (!p || typeof p.then !== 'function') { userRot = true; layout(); return; }
+    if (!p || typeof p.then !== 'function') { userRot = true; layout(); tipOnce(); return; }
     var settled = false;
-    function turn() { if (settled) return; settled = true; userRot = true; layout(); }
+    function turn() { if (settled) return; settled = true; userRot = true; layout(); tipOnce(); }
     p.then(function () {
       if (screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape').then(function () { settled = true; });
       throw new Error('no lock');
@@ -727,6 +752,20 @@
     setTimeout(function () { if (!settled && !document.fullscreenElement) turn(); }, 800);
   };
   document.addEventListener('fullscreenchange', function () { setTimeout(layout, 150); });
+  document.getElementById('exit').onclick = function (e) {
+    e.stopPropagation();
+    userRot = false;
+    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    layout();
+  };
+  // the browser's own bars cannot be hidden from a page; opened from the home screen there are none, so say how, once
+  var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches);
+  function tipOnce() {
+    if (standalone) return;
+    try { if (localStorage.getItem('ril-genetics-tip')) return; localStorage.setItem('ril-genetics-tip', '1'); } catch (e) {}
+    document.getElementById('tip').classList.add('on');
+  }
+  document.getElementById('tipok').onclick = function () { document.getElementById('tip').classList.remove('on'); };
   // swipe: finger moving to the right (as the slide shows it) brings the next slide, like turning a Hebrew page
   var sx = null, sy = null;
   stage.addEventListener('touchstart', function (e) { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, { passive: true });
