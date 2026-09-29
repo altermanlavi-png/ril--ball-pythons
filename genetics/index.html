@@ -32,8 +32,9 @@
   nav button:disabled { opacity: .35; cursor: default; }
   nav button, #count { direction: ltr; unicode-bidi: isolate; }
   #count { min-width: 76px; text-align: center; font-size: 17px; font-variant-numeric: tabular-nums; }
-  #rot { display: none; }
-  body.phone #rot { display: inline-block; }
+  #hint { display: none; position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: rgba(27,26,24,.94); color: #f3f0e9; border: 1px solid #333; padding: 9px 18px; border-radius: 999px; font-size: 15px; direction: rtl; white-space: nowrap; pointer-events: none; }
+  body.phone:not(.rot) #hint { display: block; }
+  body.phone:not(.rot) #full { background: #E3A83B; color: #151513; border-color: #E3A83B; }
   body.rot nav, body.short nav { padding-top: 4px; padding-bottom: 4px; }
   body.rot nav button, body.short nav button { height: 36px; }
 </style>
@@ -659,17 +660,20 @@
   <button id="prev" type="button" aria-label="השקף הקודם">→</button>
   <span id="count"></span>
   <button id="next" type="button" aria-label="השקף הבא">←</button>
-  <button id="rot" type="button" aria-label="סיבוב התצוגה">⟳</button>
-  <button id="full" type="button" aria-label="מסך מלא">⤢</button>
+  <button id="full" type="button" aria-label="תצוגה לרוחב במסך מלא">⤢</button>
 </nav>
 </div>
+<div id="hint">לחצו על ⤢ כדי לראות לרוחב</div>
 <script>
 (function () {
   var slides = Array.prototype.slice.call(document.querySelectorAll('#deck > section'));
   var frame = document.getElementById('frame'), deck = document.getElementById('deck'), stage = document.getElementById('stage');
   var i = 0;
+  // sizes come from the window itself, so nothing on the page can stretch the slide past the screen
   function fit() {
-    var w = stage.clientWidth, h = stage.clientHeight, s = Math.min(w / 1920, h / 1080);
+    var navH = document.querySelector('nav').offsetHeight, rot = document.body.classList.contains('rot');
+    var W = document.documentElement.clientWidth || window.innerWidth, H = window.innerHeight;
+    var w = rot ? H : W, h = (rot ? W : H) - navH, s = Math.max(0.05, Math.min(w / 1920, h / 1080));
     frame.style.width = Math.floor(1920 * s) + 'px'; frame.style.height = Math.floor(1080 * s) + 'px';
     deck.style.transform = 'scale(' + s + ')';
   }
@@ -683,11 +687,6 @@
   }
   document.getElementById('next').onclick = function () { show(i + 1); };
   document.getElementById('prev').onclick = function () { show(i - 1); };
-  document.getElementById('full').onclick = function () {
-    var d = document.documentElement;
-    if (document.fullscreenElement) { document.exitFullscreen(); }
-    else if (d.requestFullscreen) { d.requestFullscreen().catch(function () {}); }
-  };
   // Hebrew reads right to left: the left arrow moves forward
   document.addEventListener('keydown', function (e) {
     if (e.key === 'ArrowLeft' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(i + 1); }
@@ -695,12 +694,12 @@
     else if (e.key === 'Home') show(0);
     else if (e.key === 'End') show(slides.length - 1);
   });
-  // on a phone held upright the whole view is turned 90° clockwise; the ⟳ button switches this off or on
-  var wrap = document.getElementById('wrap'), body = document.body, userRot = null;
+  // ⤢ on a phone held upright: Android goes full screen and turns to landscape; where the browser cannot
+  // (iPhone, apps like Instagram), the whole view is turned 90° instead, so turning the phone fills the screen
+  var wrap = document.getElementById('wrap'), body = document.body, userRot = false;
   function layout() {
-    var W = window.innerWidth, H = window.innerHeight, upright = H > W, phone = Math.min(W, H) < 700;
-    var rot = upright && phone && userRot !== false;
-    if (!upright) rot = false;
+    var W = document.documentElement.clientWidth || window.innerWidth, H = window.innerHeight, upright = H > W, phone = Math.min(W, H) < 700;
+    var rot = upright && phone && userRot;
     body.classList.toggle('phone', phone && upright);
     body.classList.toggle('rot', rot);
     body.classList.toggle('short', !rot && H < 500);
@@ -708,7 +707,26 @@
     else { wrap.style.width = ''; wrap.style.height = ''; wrap.style.left = ''; }
     fit();
   }
-  document.getElementById('rot').onclick = function () { userRot = !body.classList.contains('rot'); layout(); };
+  document.getElementById('full').onclick = function () {
+    var d = document.documentElement, fsOn = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (body.classList.contains('rot')) { userRot = false; layout(); return; }
+    if (fsOn) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    var phoneUp = body.classList.contains('phone');
+    var req = d.requestFullscreen || d.webkitRequestFullscreen;
+    var p = null;
+    try { p = req ? req.call(d) : null; } catch (e) { p = null; }
+    if (!phoneUp) return;
+    if (!p || typeof p.then !== 'function') { userRot = true; layout(); return; }
+    var settled = false;
+    function turn() { if (settled) return; settled = true; userRot = true; layout(); }
+    p.then(function () {
+      if (screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape').then(function () { settled = true; });
+      throw new Error('no lock');
+    }).catch(turn);
+    // some browsers never answer the full-screen request: turn the view anyway
+    setTimeout(function () { if (!settled && !document.fullscreenElement) turn(); }, 800);
+  };
+  document.addEventListener('fullscreenchange', function () { setTimeout(layout, 150); });
   // swipe: finger moving to the right (as the slide shows it) brings the next slide, like turning a Hebrew page
   var sx = null, sy = null;
   stage.addEventListener('touchstart', function (e) { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, { passive: true });
