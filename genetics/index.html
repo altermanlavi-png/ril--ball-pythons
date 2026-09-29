@@ -14,7 +14,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500..900&family=Rubik:wght@300..700&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
-  body { display: flex; flex-direction: column; font-family: 'Rubik', Arial, sans-serif; -webkit-text-size-adjust: 100%; }
+  body { font-family: 'Rubik', Arial, sans-serif; -webkit-text-size-adjust: 100%; }
+  #wrap { position: fixed; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; }
+  /* a phone held upright shows the slides turned sideways: turn the phone and they fill the screen, even with rotation lock on */
+  body.rot #wrap { transform-origin: top left; transform: rotate(90deg); }
   #stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
   #frame { position: relative; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
   #deck { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: top left; }
@@ -29,11 +32,14 @@
   nav button:disabled { opacity: .35; cursor: default; }
   nav button, #count { direction: ltr; unicode-bidi: isolate; }
   #count { min-width: 76px; text-align: center; font-size: 17px; font-variant-numeric: tabular-nums; }
-  #hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(27,26,24,.92); color: #f3f0e9; padding: 8px 16px; border-radius: 999px; font-size: 15px; direction: rtl; transition: opacity .4s; pointer-events: none; }
-  @media (orientation: landscape) and (max-height: 500px) { nav { padding-top: 4px; padding-bottom: 4px; } nav button { height: 36px; } }
+  #rot { display: none; }
+  body.phone #rot { display: inline-block; }
+  body.rot nav, body.short nav { padding-top: 4px; padding-bottom: 4px; }
+  body.rot nav button, body.short nav button { height: 36px; }
 </style>
 </head>
 <body>
+<div id="wrap">
 <div id="stage"><div id="frame"><div id="deck">
 <section id="cover" data-transition="fade" style="background:radial-gradient(circle at 50% 38%, #26241F 0%, #0D0D0C 62%); color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:center; padding:128px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:40px">
 <img src="logo.jpg" alt="הלוגו של RIL Ball Pythons" style="width:620px; height:440px; object-fit:contain; mix-blend-mode:screen">
@@ -653,9 +659,10 @@
   <button id="prev" type="button" aria-label="השקף הקודם">→</button>
   <span id="count"></span>
   <button id="next" type="button" aria-label="השקף הבא">←</button>
+  <button id="rot" type="button" aria-label="סיבוב התצוגה">⟳</button>
   <button id="full" type="button" aria-label="מסך מלא">⤢</button>
 </nav>
-<div id="hint">בטלפון כדאי לסובב את המסך לרוחב</div>
+</div>
 <script>
 (function () {
   var slides = Array.prototype.slice.call(document.querySelectorAll('#deck > section'));
@@ -688,21 +695,37 @@
     else if (e.key === 'Home') show(0);
     else if (e.key === 'End') show(slides.length - 1);
   });
-  // swipe: finger moving to the right brings the next slide, like turning a Hebrew page
+  // on a phone held upright the whole view is turned 90° clockwise; the ⟳ button switches this off or on
+  var wrap = document.getElementById('wrap'), body = document.body, userRot = null;
+  function layout() {
+    var W = window.innerWidth, H = window.innerHeight, upright = H > W, phone = Math.min(W, H) < 700;
+    var rot = upright && phone && userRot !== false;
+    if (!upright) rot = false;
+    body.classList.toggle('phone', phone && upright);
+    body.classList.toggle('rot', rot);
+    body.classList.toggle('short', !rot && H < 500);
+    if (rot) { wrap.style.width = H + 'px'; wrap.style.height = W + 'px'; wrap.style.left = W + 'px'; }
+    else { wrap.style.width = ''; wrap.style.height = ''; wrap.style.left = ''; }
+    fit();
+  }
+  document.getElementById('rot').onclick = function () { userRot = !body.classList.contains('rot'); layout(); };
+  // swipe: finger moving to the right (as the slide shows it) brings the next slide, like turning a Hebrew page
   var sx = null, sy = null;
   stage.addEventListener('touchstart', function (e) { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, { passive: true });
   stage.addEventListener('touchend', function (e) {
     if (sx == null) return;
     var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+    if (body.classList.contains('rot')) { var t = dx; dx = dy; dy = t; } // turned view: the slide's right is the screen's bottom
     if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) show(dx > 0 ? i + 1 : i - 1);
   }, { passive: true });
-  stage.addEventListener('click', function (e) { var r = stage.getBoundingClientRect(); show(e.clientX < r.left + r.width / 2 ? i + 1 : i - 1); });
-  window.addEventListener('resize', fit);
-  var hint = document.getElementById('hint');
-  function hintCheck() { hint.style.opacity = (window.innerHeight > window.innerWidth && window.innerWidth < 700) ? '1' : '0'; }
-  window.addEventListener('resize', hintCheck); hintCheck();
+  stage.addEventListener('click', function (e) {
+    var r = stage.getBoundingClientRect(), leftHalf = body.classList.contains('rot') ? e.clientY < r.top + r.height / 2 : e.clientX < r.left + r.width / 2;
+    show(leftHalf ? i + 1 : i - 1);
+  });
+  window.addEventListener('resize', layout);
+  window.addEventListener('orientationchange', function () { setTimeout(layout, 200); });
   var start = parseInt((location.hash || '').slice(1), 10);
-  fit(); show(isNaN(start) ? 0 : start - 1);
+  layout(); show(isNaN(start) ? 0 : start - 1);
 })();
 </script>
 </body>
