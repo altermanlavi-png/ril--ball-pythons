@@ -275,6 +275,29 @@
   .remind { background: var(--amber-soft); border: 1px solid var(--amber); border-radius: 14px; padding: 12px 14px; margin-top: 14px; }
   .remind .row { margin-top: 10px; }
 
+  /* feeding result, prey and health */
+  .seg { display: flex; gap: 6px; }
+  .seg label { flex: 1; min-width: 0; position: relative; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span { display: block; text-align: center; padding: 11px 6px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface2); color: var(--muted); font-weight: 600; font-size: .95rem; cursor: pointer; }
+  .seg input:checked + span { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .seg input[value="refused"]:checked + span { background: var(--amber); border-color: var(--amber); color: #000; }
+  .seg input[value="regurg"]:checked + span { background: var(--red); border-color: var(--red); color: #fff; }
+  .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .grid3 > * { min-width: 0; }
+  .grid3 select { padding-inline: 8px; }
+  .fres { display: inline-block; font-size: .7rem; font-weight: 700; border-radius: 6px; padding: 1px 7px; margin-inline-start: 6px; vertical-align: 1px; }
+  .fres.ate { background: var(--green-soft); color: var(--green); }
+  .fres.refused { background: var(--amber-soft); color: var(--amber); }
+  .fres.regurg { background: var(--red-soft); color: var(--red); }
+  .alert { display: block; font-size: .76rem; font-weight: 700; color: var(--amber); margin-top: 4px; }
+  .alert.red { color: var(--red); }
+  .warnbox.red { background: var(--red-soft); border-color: var(--red); }
+  .dot.k-health, .bar.k-health { background: var(--red); }
+  .selbar { flex-wrap: wrap; }
+  .selbar .btn { padding: 8px 12px; }
+
   .grid2 > * { min-width: 0; }
   .field { min-width: 0; }
   .field input[type=date] { display: block; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; height: 48px; -webkit-appearance: none; appearance: none; text-align: start; }
@@ -2975,6 +2998,45 @@ var qrcode = function() {
       return daysSince(lf.date) === every - 1;
     });
   }
+  // a feeding record says what was offered and how it went: r = 'ate' (older records have no r) / 'refused' / 'regurg'
+  var FEED_RES = [['ate', 'אכל'], ['refused', 'סירב'], ['regurg', 'הקיא']];
+  var PREY = [['mouse', 'עכבר'], ['rat', 'חולדה'], ['asf', 'אפריקני (ASF)'], ['mastomys', 'מסטומיס'], ['hamster', 'אוגר'], ['chick', 'אפרוח'], ['other', 'אחר']];
+  var PREY_SIZE = [['pinky', 'Pinky'], ['fuzzy', 'Fuzzy'], ['hopper', 'Hopper'], ['weaned', 'Weaned'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['jumbo', 'Jumbo']];
+  var PREY_STATE = [['ft', 'מופשר'], ['live', 'חי'], ['fk', 'מומת טרי']];
+  var HEALTH_TYPES = [['vet', 'ביקור וטרינר'], ['med', 'תרופה / טיפול'], ['quarantine', 'הסגר'], ['shed', 'נשילה תקועה'], ['mites', 'קרדית'], ['resp', 'בעיה נשימתית'], ['injury', 'פציעה'], ['other', 'אחר']];
+  function optLabel(list, k) { var o = list.find(function (x) { return x[0] === k; }); return o ? o[1] : ''; }
+  function optionsHtml(list, cur, empty) { return (empty != null ? '<option value="">' + empty + '</option>' : '') + list.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + o[1] + '</option>'; }).join(''); }
+  function feedRes(f) { return f && (f.r === 'refused' || f.r === 'regurg') ? f.r : 'ate'; }
+  function preyText(f) { return [optLabel(PREY, f.prey), optLabel(PREY_SIZE, f.size), optLabel(PREY_STATE, f.state), f.preyG ? f.preyG + ' גרם' : ''].filter(Boolean).join(' · '); }
+  function feedsAsc(s) { return (s.feedings || []).slice().sort(function (a, b) { return a.date === b.date ? (a.id > b.id ? 1 : -1) : (a.date > b.date ? 1 : -1); }); }
+  function lastAte(s) { var f = feedsAsc(s).filter(function (x) { return feedRes(x) === 'ate'; }); return f.length ? f[f.length - 1] : null; }
+  function refusalStreak(s) { var f = feedsAsc(s), n = 0; for (var i = f.length - 1; i >= 0 && feedRes(f[i]) === 'refused'; i--) n++; return n; }
+  // a real drop: the latest weighing is 10% or more under the heaviest one in the 90 days before it
+  function weightDrop(s) {
+    var w = (s.weights || []).filter(function (x) { return Number(x.g) > 0; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    if (w.length < 2) return null;
+    var last = w[w.length - 1], from = addDaysISO(last.date, -90), top = null;
+    w.slice(0, -1).forEach(function (x) { if (x.date >= from && (!top || Number(x.g) > Number(top.g))) top = x; });
+    if (!top) return null;
+    var pct = Math.round((1 - Number(last.g) / Number(top.g)) * 100);
+    return pct >= 10 ? { pct: pct, from: Number(top.g), to: Number(last.g) } : null;
+  }
+  // health records whose end date ('until') has not passed yet: a quarantine or a course of treatment still running
+  function activeHealth(s) { var t = todayISO(); return (s.health || []).filter(function (h) { return h.until && h.until >= t; }); }
+  function snakeAlerts(s) {
+    if (s.status === 'sold') return [];
+    var a = [], n = refusalStreak(s), lf = lastFeed(s), wd = weightDrop(s);
+    if (lf && feedRes(lf) === 'regurg' && daysSince(lf.date) < 14) a.push({ red: true, t: 'הקיא ' + rel(daysSince(lf.date)) + '. כדאי לחכות כשבועיים לפני ההאכלה הבאה' });
+    if (n >= 3) a.push({ red: n >= 5, t: 'סירב ' + n + ' פעמים ברצף' + (lastAte(s) ? ', אכל לאחרונה ' + rel(daysSince(lastAte(s).date)) : '') });
+    if (wd) a.push({ red: wd.pct >= 15, t: 'ירד ' + wd.pct + '% במשקל (' + wd.from + ' ← ' + wd.to + ' גרם)' });
+    activeHealth(s).forEach(function (h) { a.push({ red: false, t: optLabel(HEALTH_TYPES, h.type) + ' עד ' + fmtDate(h.until) }); });
+    return a;
+  }
+  function alertsBox(list) {
+    if (!list.length) return '';
+    var red = list.some(function (x) { return x.red; });
+    return '<div class="warnbox' + (red ? ' red' : '') + '">' + list.map(function (x) { return '<p>⚠ ' + esc(x.t) + '</p>'; }).join('') + '</div>';
+  }
   function sexSym(x) { return x === 'male' ? '♂' : x === 'female' ? '♀' : ''; }
   function statusLabel(k) { var s = STATUSES.find(function (x) { return x[0] === k; }); return s && s[0] ? s[1] : ''; }
   function nextId() { var max = 0; db.snakes.forEach(function (s) { var m = /(\d+)$/.exec(s.code || ''); if (m) max = Math.max(max, +m[1]); }); return 'BP-' + String(max + 1).padStart(3, '0'); }
@@ -3179,7 +3241,7 @@ var qrcode = function() {
   }
 
   /* ================= state for views ================= */
-  var ui = { tab: 'home', q: '', status: '', sort: 'feed', sheet: null, confirmDel: false, select: false, sel: {}, hero: 0, geneFilter: [] };
+  var ui = { tab: 'home', q: '', status: '', attn: false, sort: 'feed', sheet: null, confirmDel: false, select: false, sel: {}, hero: 0, geneFilter: [] };
   (function () { var n = new Date(); ui.cal = { y: n.getFullYear(), m: n.getMonth(), sel: todayISO() }; })();
   var form = null; // {id, genes, photo}
   function formGenes() { return form ? form.genes : []; }
@@ -3207,7 +3269,7 @@ var qrcode = function() {
       (max && list.length > max ? '<span class="gx">+' + (list.length - max) + '</span>' : '') + '</div>';
   }
   function cardHtml(s) {
-    var f = feedState(s), a = age(s), st = statusLabel(s.status), mn = morphNames(s.genes);
+    var f = feedState(s), a = age(s), st = statusLabel(s.status), mn = morphNames(s.genes), al = snakeAlerts(s);
     var selMode = ui.select && ui.tab === 'collection', on = selMode && ui.sel[s.id];
     return '<div class="card' + (on ? ' picked' : '') + '"><button class="card-main" type="button" data-act="' + (selMode ? 'tsel' : 'open') + '" data-id="' + s.id + '">' +
       (selMode ? '<span class="chk' + (on ? ' on' : '') + '" aria-hidden="true">' + (on ? '✓' : '') + '</span>' : '') +
@@ -3215,8 +3277,9 @@ var qrcode = function() {
       '<span class="card-body"><span class="card-top"><span class="tag">' + esc(s.code) + '</span><span class="card-name">' + esc(s.name || '') + '</span>' +
       (sexSym(s.sex) ? '<span class="sex">' + sexSym(s.sex) + '</span>' : '') + '</span>' +
       '<span class="meta">' + esc([s.species, a, st].filter(Boolean).join(' · ')) + '</span>' + genesHtml(s.genes, 3) +
-      (mn.length ? '<span class="morph">= ' + esc(mn.join(', ')) + '</span>' : '') + '</span></button>' +
-      '<div class="card-side"><span class="fed ' + f.k + '"><i></i>' + esc(f.label) + '</span>' +
+      (mn.length ? '<span class="morph">= ' + esc(mn.join(', ')) + '</span>' : '') +
+      (al.length ? '<span class="alert' + (al.some(function (x) { return x.red; }) ? ' red' : '') + '">⚠ ' + esc(al[0].t) + (al.length > 1 ? ' (+' + (al.length - 1) + ')' : '') + '</span>' : '') + '</span></button>' +
+      '<div class="card-side"><span class="fed ' + f.k + '"><i></i>' + (feedRes(lastFeed(s)) !== 'ate' ? esc(optLabel(FEED_RES, feedRes(lastFeed(s)))) + ' · ' : '') + esc(f.label) + '</span>' +
       '<button class="mini" type="button" data-act="quickfeed" data-id="' + s.id + '">✓ האכלתי</button></div></div>';
   }
 
@@ -3235,6 +3298,8 @@ var qrcode = function() {
       : '<button class="hstatus" type="button" data-act="gofeed">' + (due ? due + (due === 1 ? ' נחש ממתין' : ' נחשים ממתינים') + ' להאכלה' : 'הכול מעודכן') + '</button>';
     var tm = db.remindFeed !== false ? dueTomorrow() : [];
     var remind = tm.length ? '<button class="hnext" type="button" data-act="gofeed">מחר האכלה: ' + esc(tm.slice(0, 4).map(sname).join(', ')) + (tm.length > 4 ? ' ועוד ' + (tm.length - 4) : '') + '</button>' : '';
+    var attn = s.filter(function (x) { return snakeAlerts(x).length; }).length;
+    if (attn) remind += '<button class="hnext" type="button" data-act="goattn" style="color:var(--amber)">⚠ ' + (attn === 1 ? 'נחש אחד דורש' : attn + ' נחשים דורשים') + ' תשומת לב</button>';
     return '<div class="homehero"><p class="welcome">ברוכים הבאים ל</p><img class="logo" src="' + LOGO + '" alt="RIL Ball Pythons">' + status + remind +
       (nx ? '<button class="hnext" type="button" data-act="opennext" data-date="' + nx.date + '">' + esc(nx.text) + '</button>' : '') +
       '<div class="hactions"><button class="hbtn primary" type="button" data-act="add">+ נחש</button>' +
@@ -3272,6 +3337,7 @@ var qrcode = function() {
     var q = ui.q.trim().toLowerCase(), alts = searchAlts(q);
     var list = db.snakes.filter(function (s) {
       if (ui.status && (s.status || '') !== ui.status) return false;
+      if (ui.attn && !snakeAlerts(s).length) return false;
       if (ui.geneFilter.length && !ui.geneFilter.every(function (g) { return hasGene(s, g); })) return false;
       if (!q) return true;
       var hay = [s.code, s.name, s.species, s.location, (s.genes || []).join(' ')].join(' ').toLowerCase();
@@ -3291,7 +3357,10 @@ var qrcode = function() {
     h += '<div class="gfield" style="margin:12px 0 0"><span>סינון לפי גנטיקה</span>' + genePicker('filter', 'flt') + '<span class="hint" id="fltNote">' + fltNote() + '</span></div>';
     h += '<div class="chips">' + [['feed', 'לפי האכלה'], ['name', 'לפי שם'], ['loc', 'לפי מיקום'], ['new', 'חדשים']].map(function (c) {
       return '<button class="chip' + (ui.sort === c[0] ? ' on' : '') + '" type="button" data-act="sort" data-v="' + c[0] + '">' + c[1] + '</button>';
-    }).join('') + '<button class="chip' + (ui.select ? ' on' : '') + '" type="button" data-act="toggleselect">בחירה מרובה</button></div>';
+    }).join('') + '<button class="chip' + (ui.select ? ' on' : '') + '" type="button" data-act="toggleselect">בחירה מרובה</button>';
+    var attn = db.snakes.filter(function (s) { return snakeAlerts(s).length; }).length;
+    if (attn || ui.attn) h += '<button class="chip' + (ui.attn ? ' on' : '') + '" type="button" data-act="attn">⚠ תשומת לב (' + attn + ')</button>';
+    h += '</div>';
     var used = {}; db.snakes.forEach(function (s) { if (s.status) used[s.status] = 1; });
     var st = STATUSES.filter(function (x) { return x[0] && used[x[0]]; });
     if (st.length) h += '<div class="chips"><button class="chip' + (!ui.status ? ' on' : '') + '" type="button" data-act="status" data-v="">הכל</button>' +
@@ -3310,7 +3379,7 @@ var qrcode = function() {
   /* ---------- diary: month calendar (like a phone calendar app) ---------- */
   var DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   var WD = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
-  var KORDER = { custom: 0, shed: 1, pair: 2, ovul: 3, laid: 4, hatchdue: 5, hatch: 6, feed: 7 };
+  var KORDER = { custom: 0, health: 0, shed: 1, pair: 2, ovul: 3, laid: 4, hatchdue: 5, hatch: 6, feed: 7 };
   function isoOf(y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); }
   function addDaysISO(s, n) { var d = parseISO(s); d.setDate(d.getDate() + n); return isoOf(d.getFullYear(), d.getMonth(), d.getDate()); }
   // every dated thing in one place: feedings, hatch dates, the next feeding that is due, and your own events
@@ -3318,7 +3387,11 @@ var qrcode = function() {
     var map = {}, t = todayISO();
     function put(date, ev) { (map[date] = map[date] || []).push(ev); }
     db.snakes.forEach(function (s) {
-      (s.feedings || []).forEach(function (f) { put(f.date, { k: 'feed', title: 'האכלה — ' + sname(s), sub: f.note || '', sid: s.id }); });
+      (s.feedings || []).forEach(function (f) {
+        var r = feedRes(f);
+        put(f.date, { k: 'feed', title: (r === 'refused' ? 'סירב — ' : r === 'regurg' ? 'הקאה — ' : 'האכלה — ') + sname(s), sub: [preyText(f), f.note].filter(Boolean).join(' · '), sid: s.id });
+      });
+      (s.health || []).forEach(function (hr) { put(hr.date, { k: 'health', title: optLabel(HEALTH_TYPES, hr.type) + ' — ' + sname(s), sub: [hr.note, hr.until ? 'עד ' + fmtDate(hr.until) : ''].filter(Boolean).join(' · '), sid: s.id }); });
       if (s.hatch) put(s.hatch, { k: 'hatch', title: 'בקיעה — ' + sname(s), sub: '', sid: s.id });
     });
     (db.events || []).forEach(function (e) {
@@ -3373,7 +3446,7 @@ var qrcode = function() {
     h += '<div class="cal-tools" style="justify-content:space-between"><button class="linkbtn" type="button" data-act="caltoday"' + (here ? ' hidden' : '') + '>היום</button><button class="linkbtn" type="button" data-act="ics">ייצוא ליומן הטלפון (.ics)</button></div>';
     h += '<div class="wd">' + WD.map(function (w) { return '<span>' + w + '</span>'; }).join('') + '</div>';
     h += '<div class="calgrid" id="calgrid">' + cells + '</div>';
-    h += '<div class="legend"><span><i class="dot k-feed"></i>האכלה</span><span><i class="dot k-shed"></i>התנשלות</span><span><i class="dot k-pair"></i>זיווג</span><span><i class="dot k-ovul"></i>ביוץ</span><span><i class="dot k-laid"></i>הטלה</span><span><i class="dot k-hatch"></i>בקיעה</span></div>';
+    h += '<div class="legend"><span><i class="dot k-feed"></i>האכלה</span><span><i class="dot k-shed"></i>התנשלות</span><span><i class="dot k-pair"></i>זיווג</span><span><i class="dot k-ovul"></i>ביוץ</span><span><i class="dot k-laid"></i>הטלה</span><span><i class="dot k-hatch"></i>בקיעה</span><span><i class="dot k-health"></i>בריאות</span></div>';
     h += '<div class="section"><div class="section-head"><h2 class="section-title">' + longDate(c.sel) + '</h2><button class="linkbtn" type="button" data-act="addevent">+ הוספה</button></div>' + agendaHtml(map[c.sel] || []) + '</div>';
     return h;
   }
@@ -3646,12 +3719,15 @@ var qrcode = function() {
     h += genesHtml(s.genes, 0);
     if (mn.length) h += '<p class="morph" style="margin-top:8px">= ' + esc(mn.join(', ')) + '</p>';
     h += warnHtml(s.genes);
+    h += alertsBox(snakeAlerts(s));
+    var la = lastAte(s);
     h += '<div class="spec">' + spec('תאריך בקיעה', s.hatch ? fmtDate(s.hatch) : '') + spec('משקל', s.weight ? s.weight + ' גרם' : '') + spec('מיקום', s.location) + spec('האכלה כל', s.feedEvery ? s.feedEvery + ' ימים' : '') +
+      spec('אכל לאחרונה', la ? fmtDate(la.date) + ' (' + rel(daysSince(la.date)) + ')' + (preyText(la) ? ' · ' + preyText(la) : '') : '') +
       parentRow('אב', fa, s.fatherText) + parentRow('אם', mo, s.motherText) + spec('מחיר רכישה', Number(s.buyPrice) > 0 ? Number(s.buyPrice).toLocaleString('he-IL') + ' ₪' : '') +
       (s.status === 'breeder' ? spec('ערך הנחש', Number(s.value) > 0 ? Number(s.value).toLocaleString('he-IL') + ' ₪' : '') : spec('מחיר מכירה', Number(s.salePrice) > 0 ? Number(s.salePrice).toLocaleString('he-IL') + ' ₪' : '')) + spec('קונה', s.buyer) + spec('תאריך מכירה', s.soldDate ? fmtDate(s.soldDate) : '') + '</div>';
     if (s.notes) h += '<p style="margin-top:14px;white-space:pre-wrap;color:var(--muted)">' + esc(s.notes) + '</p>';
     h += '<div class="section"><div class="row"><button class="btn btn-primary" type="button" data-act="feedform" data-id="' + s.id + '">+ תיעוד האכלה</button><button class="btn btn-soft" type="button" data-act="sharecard" data-id="' + s.id + '">כרטיס מכירה</button></div>' +
-      '<div class="row" style="margin-top:10px"><button class="btn btn-ghost" type="button" data-act="addshed" data-id="' + s.id + '">+ התנשלות</button><button class="btn btn-ghost" type="button" data-act="label" data-id="' + s.id + '">תווית להדפסה</button></div></div>';
+      '<div class="row" style="margin-top:10px"><button class="btn btn-ghost" type="button" data-act="addshed" data-id="' + s.id + '">+ התנשלות</button><button class="btn btn-ghost" type="button" data-act="healthform" data-id="' + s.id + '">+ בריאות</button><button class="btn btn-ghost" type="button" data-act="label" data-id="' + s.id + '">תווית להדפסה</button></div></div>';
     if (wsAll.length > 1) {
       h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">משקל</h3>' + weightChartSvg(wsAll) + ws.map(function (w, i) {
         var p = ws[i + 1], d = p ? w.g - p.g : 0;
@@ -3659,21 +3735,61 @@ var qrcode = function() {
       }).join('') + '</div>';
     }
     h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">האכלות</h3>' + (feeds.length ? feeds.map(function (f) {
-      return '<div class="logrow"><div>' + fmtDate(f.date) + (f.note ? '<small>' + esc(f.note) + '</small>' : '') + '</div><button class="icon-btn" type="button" data-act="delfeed" data-id="' + s.id + '" data-fid="' + f.id + '" aria-label="מחיקת האכלה">✕</button></div>';
+      var r = feedRes(f), sub = [preyText(f), f.note].filter(Boolean).join(' · ');
+      return '<div class="logrow"><div>' + fmtDate(f.date) + '<span class="fres ' + r + '">' + optLabel(FEED_RES, r) + '</span>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div><button class="icon-btn" type="button" data-act="delfeed" data-id="' + s.id + '" data-fid="' + f.id + '" aria-label="מחיקת האכלה">✕</button></div>';
     }).join('') : '<p class="note">עדיין לא תועדו האכלות.</p>') + '</div>';
     var sheds = (db.events || []).filter(function (e) { return e.type === 'shed' && e.sid === s.id; }).sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
     h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">התנשלויות</h3>' + (sheds.length ? sheds.map(function (e) {
       return '<div class="logrow"><div>' + fmtDate(e.date) + (e.note ? '<small>' + esc(e.note) + '</small>' : '') + '</div><button class="icon-btn" type="button" data-act="editevent" data-id="' + e.id + '" aria-label="עריכת התנשלות">✎</button></div>';
     }).join('') : '<p class="note">עדיין לא תועדו התנשלויות.</p>') + '</div>';
+    var hs = (s.health || []).slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }), t = todayISO();
+    h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">בריאות</h3>' + (hs.length ? hs.map(function (x) {
+      var sub = [x.until ? (x.until >= t ? 'עד ' : 'הסתיים ') + fmtDate(x.until) : '', x.note].filter(Boolean).join(' · ');
+      return '<div class="logrow"><div>' + fmtDate(x.date) + ' · ' + esc(optLabel(HEALTH_TYPES, x.type)) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div><button class="icon-btn" type="button" data-act="healthform" data-id="' + s.id + '" data-hid="' + x.id + '" aria-label="עריכת רישום בריאות">✎</button></div>';
+    }).join('') : '<p class="note">אין רישומי בריאות.</p>') + '</div>';
     return h;
   }
   function feedFormHtml(s) {
     var t = todayISO();
     return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="back" aria-label="חזרה">✕</button></div><h2 class="sheet-title">האכלה — ' + esc(sname(s)) + '</h2>' +
       '<form id="feedForm" data-id="' + s.id + '"><label class="field">תאריך<input type="date" name="date" value="' + t + '" max="' + t + '" required></label>' +
-      '<label class="field">מה אכל<input type="text" name="note" maxlength="120" placeholder="עכבר בוגר"></label>' +
-      '<label class="field">משקל אחרי שקילה (גרם)<input type="number" name="weight" min="0" max="100000" inputmode="decimal" placeholder="לא חובה"></label>' +
+      '<div class="gfield"><span>מה קרה</span><div class="seg" role="radiogroup">' + FEED_RES.map(function (o, i) {
+        return '<label><input type="radio" name="r" value="' + o[0] + '"' + (i ? '' : ' checked') + '><span>' + o[1] + '</span></label>';
+      }).join('') + '</div></div>' + preyFieldsHtml(s.lastPrey || {}) +
+      '<label class="field">הערה<input type="text" name="note" maxlength="120" placeholder="לא חובה"></label>' +
+      '<label class="field">משקל הנחש (גרם)<input type="number" name="weight" min="0" max="100000" inputmode="decimal" placeholder="לא חובה"></label>' +
       '<div class="row"><button class="btn btn-primary" type="submit">שמירה</button><button class="btn btn-ghost" type="button" data-act="back">ביטול</button></div></form>';
+  }
+  // the snake's last prey is filled in, so a routine feeding is one tap on save
+  function preyFieldsHtml(p) {
+    return '<div class="grid3"><label class="field">טרף<select name="prey">' + optionsHtml(PREY, p.prey, '—') + '</select></label>' +
+      '<label class="field">גודל<select name="size" dir="ltr">' + optionsHtml(PREY_SIZE, p.size, '—') + '</select></label>' +
+      '<label class="field">מצב<select name="state">' + optionsHtml(PREY_STATE, p.state, '—') + '</select></label></div>' +
+      '<label class="field">משקל הטרף (גרם)<input type="number" name="preyG" min="0" max="5000" inputmode="decimal" value="' + esc(p.preyG || '') + '" placeholder="לא חובה"><span class="hint">טרף מתאים שוקל בערך 10%–15% ממשקל הנחש</span></label>';
+  }
+  function healthFormHtml(s) {
+    var x = ui.sheet.hid ? (s.health || []).find(function (r) { return r.id === ui.sheet.hid; }) : null, t = todayISO();
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="back" aria-label="חזרה">✕</button>' +
+      (x ? '<div class="acts"><button class="icon-btn danger" type="button" data-act="delhealth" data-id="' + s.id + '" data-hid="' + x.id + '" aria-label="מחיקה">🗑</button></div>' : '') + '</div>' +
+      '<h2 class="sheet-title">' + (x ? 'עריכת רישום בריאות' : 'בריאות') + ' — ' + esc(sname(s)) + '</h2>' +
+      '<form id="healthForm" data-id="' + s.id + '" data-hid="' + (x ? x.id : '') + '" autocomplete="off">' +
+      '<label class="field">סוג<select name="type">' + optionsHtml(HEALTH_TYPES, x ? x.type : 'vet') + '</select></label>' +
+      '<div class="grid2"><label class="field">תאריך<input type="date" name="date" required value="' + (x ? x.date : t) + '"></label>' +
+      '<label class="field">עד תאריך<input type="date" name="until" value="' + (x ? esc(x.until || '') : '') + '"></label></div>' +
+      '<p class="hint" style="margin:-6px 0 14px">"עד תאריך" נועד לטיפול או להסגר שנמשכים זמן מה. עד התאריך הזה הנחש יסומן כדורש תשומת לב.</p>' +
+      '<label class="field">פירוט<textarea name="note" rows="3" maxlength="600" placeholder="מה נמצא, איזו תרופה ובאיזה מינון, מה אמר הווטרינר">' + (x ? esc(x.note || '') : '') + '</textarea></label>' +
+      '<div class="row"><button class="btn btn-primary" type="submit">שמירה</button><button class="btn btn-ghost" type="button" data-act="back">ביטול</button></div></form>';
+  }
+  function saveHealth(f) {
+    var s = snakeById(f.dataset.id); if (!s) return;
+    var fd = new FormData(f), date = String(fd.get('date') || ''), until = String(fd.get('until') || '');
+    if (!date) return toast('צריך תאריך');
+    if (until && until < date) return toast('"עד תאריך" לא יכול להיות לפני התאריך');
+    var data = { type: String(fd.get('type') || 'other'), date: date, until: until, note: String(fd.get('note') || '').trim() };
+    var x = f.dataset.hid ? (s.health || []).find(function (r) { return r.id === f.dataset.hid; }) : null;
+    if (x) Object.assign(x, data); else s.health = (s.health || []).concat(Object.assign({ id: uid() }, data));
+    if (!save()) return;
+    ui.sheet = { type: 'detail', id: s.id }; renderPage(); renderSheet(); toast(x ? 'הרישום עודכן' : 'הרישום נשמר');
   }
   function snakeFormHtml() {
     var s = form.id ? snakeById(form.id) : null; function v(k) { return s && s[k] != null ? esc(s[k]) : ''; }
@@ -3710,6 +3826,7 @@ var qrcode = function() {
     var s = ui.sheet.id ? snakeById(ui.sheet.id) : null;
     if (ui.sheet.type === 'detail') { if (!s) return closeSheet(); sh.innerHTML = detailHtml(s); }
     else if (ui.sheet.type === 'feed') { if (!s) return closeSheet(); sh.innerHTML = feedFormHtml(s); }
+    else if (ui.sheet.type === 'health') { if (!s) return closeSheet(); sh.innerHTML = healthFormHtml(s); }
     else if (ui.sheet.type === 'event') sh.innerHTML = eventFormHtml();
     else if (ui.sheet.type === 'pair') sh.innerHTML = pairFormHtml();
     else if (ui.sheet.type === 'label') sh.innerHTML = labelSheetHtml();
@@ -3775,17 +3892,27 @@ var qrcode = function() {
   }
 
   /* ---------- feeding ---------- */
-  function addFeeding(id, date, note, weight) {
+  // rec: { date, r, prey, size, state, preyG, note }; a feeding that was eaten also becomes the snake's default prey
+  function feedRecord(s, rec) {
+    var p = s.lastPrey || {}, f = { id: uid(), date: rec.date, note: rec.note || '', r: rec.r || 'ate' };
+    ['prey', 'size', 'state', 'preyG'].forEach(function (k) { var v = rec[k] !== undefined ? rec[k] : p[k]; if (v) f[k] = v; });
+    s.feedings = (s.feedings || []).concat(f);
+    if (f.r === 'ate') s.lastPrey = { prey: f.prey || '', size: f.size || '', state: f.state || '', preyG: f.preyG || '' };
+    return f;
+  }
+  function addFeeding(id, rec, weight) {
     var s = snakeById(id); if (!s) return;
-    s.feedings = (s.feedings || []).concat({ id: uid(), date: date, note: note || '' });
-    if (weight !== '' && weight != null) { s.weight = weight; s.weights = (s.weights || []).concat({ date: date, g: weight }); }
+    feedRecord(s, rec);
+    if (weight !== '' && weight != null) { s.weight = weight; s.weights = (s.weights || []).concat({ date: rec.date, g: weight }); }
     save(); renderPage();
   }
   function quickFeed(id) {
     var s = snakeById(id); if (!s) return;
     var lf = lastFeed(s);
     if (lf && lf.date === todayISO()) return toast(sname(s) + ' כבר תועד היום');
-    addFeeding(id, todayISO(), '', ''); toast('ההאכלה תועדה: ' + sname(s));
+    addFeeding(id, { date: todayISO(), r: 'ate' }, '');
+    var pt = preyText(s.lastPrey || {});
+    toast('ההאכלה תועדה: ' + sname(s) + (pt ? ' · ' + pt : ''));
   }
 
   /* ---------- backup ---------- */
@@ -4033,17 +4160,19 @@ var qrcode = function() {
   function selBarHtml() {
     var n = selectedIds().length;
     return '<div class="selbar"><span>' + n + ' נבחרו</span><button class="btn btn-primary" type="button" data-act="selfeed"' + (n ? '' : ' disabled') + '>✓ האכלתי</button>' +
+      '<button class="btn btn-soft" type="button" data-act="selrefused"' + (n ? '' : ' disabled') + ' style="color:var(--amber)">✕ סירבו</button>' +
       '<button class="btn btn-ghost" type="button" data-act="labelsel"' + (n ? '' : ' disabled') + '>תוויות</button><button class="btn btn-ghost" type="button" data-act="selall">הכל</button><button class="btn btn-ghost" type="button" data-act="toggleselect">ביטול</button></div>';
   }
-  function feedSelected() {
+  // each snake gets its own usual prey; a refusal keeps what was offered
+  function feedSelected(r) {
     var ids = selectedIds(), done = 0, t = todayISO();
     ids.forEach(function (id) {
       var s = snakeById(id), lf = s && lastFeed(s);
       if (!s || (lf && lf.date === t)) return;
-      s.feedings = (s.feedings || []).concat({ id: uid(), date: t, note: '' }); done++;
+      feedRecord(s, { date: t, r: r || 'ate' }); done++;
     });
     save(); ui.select = false; ui.sel = {}; renderPage();
-    toast(done ? 'תועדו ' + done + ' האכלות' : 'כולם כבר תועדו היום');
+    toast(done ? (r === 'refused' ? 'תועדו ' + done + ' סירובים' : 'תועדו ' + done + ' האכלות') : 'כולם כבר תועדו היום');
   }
 
   /* ---------- files: backup + calendar (.ics) ---------- */
@@ -4072,7 +4201,7 @@ var qrcode = function() {
     Object.keys(map).sort().forEach(function (d) {
       if (d < from || d > to) return;
       map[d].forEach(function (e, i) {
-        if ((e.k === 'feed' || e.k === 'hatch') && !e.eid && !e.pid) return; // past records are not reminders
+        if ((e.k === 'feed' || e.k === 'hatch' || e.k === 'health') && !e.eid && !e.pid) return; // past records are not reminders
         var ds = d.replace(/-/g, '');
         L.push('BEGIN:VEVENT', 'UID:' + ds + '-' + i + '-' + (e.eid || e.pid || e.sid || 'x') + '@lavi-snakes', 'DTSTAMP:' + stamp);
         if (e.time) { var hm = e.time.replace(':', '') + '00'; L.push('DTSTART:' + ds + 'T' + hm); }
@@ -4299,7 +4428,7 @@ var qrcode = function() {
       case 'open': openSheet({ type: 'detail', id: id }); break;
       case 'edit': openForm(id); break;
       case 'close': closeSheet(); break;
-      case 'back': if (form && form.id) { ui.sheet = { type: 'detail', id: form.id }; form = null; renderSheet(); } else if (ui.sheet && (ui.sheet.type === 'feed' || ui.sheet.type === 'share' || (ui.sheet.type === 'label' && ui.sheet.id))) { ui.sheet = { type: 'detail', id: ui.sheet.id }; renderSheet(); } else closeSheet(); break;
+      case 'back': if (form && form.id) { ui.sheet = { type: 'detail', id: form.id }; form = null; renderSheet(); } else if (ui.sheet && (ui.sheet.type === 'feed' || ui.sheet.type === 'health' || ui.sheet.type === 'share' || (ui.sheet.type === 'label' && ui.sheet.id))) { ui.sheet = { type: 'detail', id: ui.sheet.id }; renderSheet(); } else closeSheet(); break;
       case 'sort': ui.sort = el.dataset.v; renderPage(); break;
       case 'status': ui.status = el.dataset.v; renderPage(); break;
       case 'quickfeed': quickFeed(id); break;
@@ -4330,7 +4459,12 @@ var qrcode = function() {
       case 'toggleselect': ui.select = !ui.select; ui.sel = {}; renderPage(); break;
       case 'tsel': ui.sel[id] = !ui.sel[id]; renderPage(); break;
       case 'selall': filteredSnakes().forEach(function (s) { ui.sel[s.id] = true; }); renderPage(); break;
-      case 'selfeed': feedSelected(); break;
+      case 'selfeed': feedSelected('ate'); break;
+      case 'selrefused': feedSelected('refused'); break;
+      case 'attn': ui.attn = !ui.attn; renderPage(); break;
+      case 'goattn': ui.tab = 'collection'; ui.attn = true; ui.select = false; ui.q = ''; ui.status = ''; renderPage(); window.scrollTo(0, 0); break;
+      case 'healthform': openSheet({ type: 'health', id: id, hid: el.dataset.hid || '' }); break;
+      case 'delhealth': var hsn = snakeById(id); if (hsn && confirm('למחוק את רישום הבריאות?')) { hsn.health = (hsn.health || []).filter(function (x) { return x.id !== el.dataset.hid; }); save(); ui.sheet = { type: 'detail', id: id }; renderPage(); renderSheet(); toast('הרישום נמחק'); } break;
       case 'addpair': openSheet({ type: 'pair', pid: null }); break;
       case 'openpair': openSheet({ type: 'pair', pid: id }); break;
       case 'delpair': if (confirm('למחוק את הזיווג?')) { db.pairs = db.pairs.filter(function (x) { return x.id !== id; }); save(); closeSheet(); renderPage(); toast('הזיווג נמחק'); } break;
@@ -4418,9 +4552,11 @@ var qrcode = function() {
     else if (f.id === 'pairForm') { e.preventDefault(); savePair(f); }
     else if (f.id === 'feedForm') {
       e.preventDefault(); var fd = new FormData(f); var date = String(fd.get('date') || todayISO());
-      addFeeding(f.dataset.id, date, String(fd.get('note') || '').trim(), num(fd.get('weight')));
-      ui.sheet = { type: 'detail', id: f.dataset.id }; renderSheet(); toast('ההאכלה תועדה');
+      var r = String(fd.get('r') || 'ate');
+      addFeeding(f.dataset.id, { date: date, r: r, prey: String(fd.get('prey') || ''), size: String(fd.get('size') || ''), state: String(fd.get('state') || ''), preyG: num(fd.get('preyG')), note: String(fd.get('note') || '').trim() }, num(fd.get('weight')));
+      ui.sheet = { type: 'detail', id: f.dataset.id }; renderSheet(); toast(r === 'refused' ? 'הסירוב תועד' : r === 'regurg' ? 'ההקאה תועדה' : 'ההאכלה תועדה');
     }
+    else if (f.id === 'healthForm') { e.preventDefault(); saveHealth(f); }
   });
 
   // swipe the month grid sideways to change month (Hebrew/RTL: a swipe to the right brings the next month)
