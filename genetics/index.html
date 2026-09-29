@@ -6,8 +6,16 @@
 <meta name="color-scheme" content="dark">
 <title>RIL — גנטיקה של פיתונים מתכדרים</title>
 <meta name="description" content="מצגת של RIL Ball Pythons על גנטיקה של פיתונים מתכדרים: רצסיבי, קו־דומיננטי, דומיננטי, קומפלקסים וקומבואים">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RIL Ball Pythons">
+<meta property="og:url" content="https://altermanlavi-png.github.io/ril--ball-pythons/genetics/">
 <meta property="og:title" content="RIL — גנטיקה של פיתונים מתכדרים">
-<meta property="og:description" content="רצסיבי · קו־דומיננטי · דומיננטי · קומפלקסים · קומבואים">
+<meta property="og:description" content="מצגת ומחשבון גנטיקה: רצסיבי, קו־דומיננטי, דומיננטי, קומפלקסים וקומבואים">
+<meta property="og:image" content="https://altermanlavi-png.github.io/ril--ball-pythons/genetics/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="הלוגו של RIL Ball Pythons והכותרת הגנטיקה של פיתונים מתכדרים">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
@@ -52,7 +60,42 @@
   #tip b { color: #E3A83B; }
   #tip ol { margin: 10px 0 16px; padding-right: 20px; }
   #tip button { width: 100%; height: 44px; border-radius: 12px; border: 0; background: #E3A83B; color: #151513; font: 600 16px 'Rubik', Arial, sans-serif; cursor: pointer; }
-  body.rot nav, body.short nav { padding-top: 4px; padding-bottom: 4px; }
+  /* calculator screen */
+  #calc { display: none; position: fixed; inset: 0; z-index: 40; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #0D0D0C; color: #F3F0E9; direction: rtl; font-family: 'Rubik', Arial, sans-serif; }
+  body.calcopen #calc { display: block; }
+  body.calcopen #wrap, body.calcopen #hint { visibility: hidden; }
+  .cwrap { max-width: 900px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom)); }
+  .chead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .chead h1 { font: 800 30px/1.15 'Frank Ruhl Libre', Georgia, serif; margin: 0; }
+  #closecalc { flex: none; height: 42px; padding: 0 16px; border-radius: 12px; border: 1px solid #333; background: #1b1a18; color: #f3f0e9; font: 600 15px 'Rubik', Arial, sans-serif; cursor: pointer; }
+  .csub { color: #B9B4AA; font-size: 15px; margin: 0 0 16px; line-height: 1.5; }
+  .cparents { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 700px) { .cparents { grid-template-columns: 1fr 1fr; } }
+  .cpar { background: #1B1A18; border-radius: 16px; padding: 14px; }
+  .cpar h2 { margin: 0 0 10px; font-size: 18px; color: #E3A83B; }
+  .cchips { display: flex; flex-wrap: wrap; gap: 8px; direction: ltr; justify-content: flex-end; min-height: 4px; margin-bottom: 8px; }
+  .cchip { display: inline-flex; align-items: center; background: #E3A83B; color: #151513; border-radius: 999px; overflow: hidden; }
+  .ctog { border: 0; background: none; color: inherit; font: 600 15px 'Rubik', Arial, sans-serif; padding: 8px 4px 8px 14px; cursor: pointer; }
+  .cdel { border: 0; background: none; color: inherit; font-size: 13px; width: 32px; height: 36px; cursor: pointer; }
+  .cinrow { display: flex; gap: 8px; }
+  .cinrow input { flex: 1; min-width: 0; height: 46px; border-radius: 12px; border: 1px solid #333; background: #0D0D0C; color: #F3F0E9; font: 16px 'Rubik', Arial, sans-serif; padding: 0 12px; direction: ltr; text-align: left; }
+  .cinrow input::placeholder { text-align: right; direction: rtl; color: #7d7870; }
+  .cadd { flex: none; width: 52px; border-radius: 12px; border: 0; background: #F3F0E9; color: #151513; font-size: 22px; font-weight: 700; cursor: pointer; }
+  .csugs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; direction: ltr; justify-content: flex-end; }
+  .csug { border: 1px solid #3a3833; background: #0D0D0C; color: #F3F0E9; border-radius: 999px; padding: 7px 12px; font: 14px 'Rubik', Arial, sans-serif; cursor: pointer; }
+  .chelp { color: #7d7870; font-size: 13px; margin: 8px 0 0; line-height: 1.45; }
+  .cexs { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; align-items: center; }
+  .cexs span { color: #B9B4AA; font-size: 14px; }
+  .cex, #c-clear { border: 1px solid #3a3833; background: none; color: #F3F0E9; border-radius: 999px; padding: 7px 12px; font: 14px 'Rubik', Arial, sans-serif; cursor: pointer; direction: ltr; }
+  .ctitle { font-size: 20px; font-weight: 700; margin: 20px 0 8px; }
+  .cres { background: #1B1A18; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; }
+  .cres-top { display: flex; align-items: baseline; gap: 12px; }
+  .cpct { flex: none; font: 800 22px 'Frank Ruhl Libre', Georgia, serif; color: #E3A83B; min-width: 64px; }
+  .clab { flex: 1; font-size: 16px; text-align: left; line-height: 1.4; }
+  .cbar { height: 5px; background: #2a2926; border-radius: 9px; margin-top: 8px; overflow: hidden; direction: ltr; }
+  .cbar i { display: block; height: 100%; background: #E3A83B; border-radius: 9px; }
+  .cnote { color: #B9B4AA; font-size: 14px; line-height: 1.5; margin: 10px 0 0; }
+  .cwarn { color: #E5776B; }  body.rot nav, body.short nav { padding-top: 4px; padding-bottom: 4px; }
   body.rot nav button, body.short nav button { height: 36px; }
 </style>
 </head>
@@ -637,19 +680,19 @@
 </div>
 <div style="display:flex; flex-direction:row-reverse; flex-wrap:wrap; gap:32px">
 <div style="width:816px; background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:row-reverse; gap:24px; align-items:start">
-<svg aria-label="אזהרה" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
+<svg aria-label="׳׳–׳”׳¨׳”" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px"><h3 style="font-size:32px; font-weight:700; color:#F3F0E9">Spider × Spider</h3><p style="font-size:26px; line-height:1.45; color:#B9B4AA">&#8235;לא מוכר Super Spider מאומת, ולכל ה־Spider יש וובל. לא כדאי לזווג שני Spider&#8236;</p></div>
 </div>
 <div style="width:816px; background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:row-reverse; gap:24px; align-items:start">
-<svg aria-label="אזהרה" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
+<svg aria-label="׳׳–׳”׳¨׳”" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px"><h3 style="font-size:32px; font-weight:700; color:#F3F0E9">Champagne × Champagne</h3><p style="font-size:26px; line-height:1.45; color:#B9B4AA">&#8235;ה־Super Champagne קטלני. רבע מהביצים צפויות לא לשרוד&#8236;</p></div>
 </div>
 <div style="width:816px; background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:row-reverse; gap:24px; align-items:start">
-<svg aria-label="אזהרה" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
+<svg aria-label="׳׳–׳”׳¨׳”" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px"><h3 style="font-size:32px; font-weight:700; color:#F3F0E9">Hidden Gene Woma × HGW</h3><p style="font-size:26px; line-height:1.45; color:#B9B4AA">&#8235;הסופר מדווח כקטלני או עם בעיות נוירולוגיות קשות&#8236;</p></div>
 </div>
 <div style="width:816px; background:#1B1A18; border-radius:20px; padding:32px 36px; display:flex; flex-direction:row-reverse; gap:24px; align-items:start">
-<svg aria-label="אזהרה" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
+<svg aria-label="׳׳–׳”׳¨׳”" width="48" height="48" viewBox="0 0 24 24" style="flex:none"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#E3A83B" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#E3A83B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.2" fill="#E3A83B"/></svg>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px"><h3 style="font-size:32px; font-weight:700; color:#F3F0E9">Super Cinnamon · Super Black Pastel</h3><p style="font-size:26px; line-height:1.45; color:#B9B4AA">&#8235;ידועים בנטייה לקינקים בעמוד השדרה ולאף שטוח (Duckbill)&#8236;</p></div>
 </div>
 </div>
@@ -673,6 +716,18 @@
 <img src="logo.jpg" alt="הלוגו של RIL Ball Pythons" style="width:700px; height:496px; object-fit:contain; mix-blend-mode:screen">
 <h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:96px; font-weight:800; line-height:1.1; color:#F3F0E9; text-align:center">&#8235;שאלות?&#8236;</h2>
 </section>
+<section id="calc-slide" style="background:radial-gradient(circle at 50% 45%, #26241F 0%, #0D0D0C 65%); color:#F3F0E9; font-family:'Rubik', Arial, sans-serif; text-align:center; padding:128px 128px 160px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:44px">
+<p style="font-size:28px; font-weight:600; color:#E3A83B">&#8235;נסו בעצמכם&#8236;</p>
+<h2 style="font-family:'Frank Ruhl Libre', Georgia, serif; font-size:112px; font-weight:800; line-height:1.1; color:#F3F0E9">&#8235;מחשבון גנטיקה&#8236;</h2>
+<p style="font-size:36px; line-height:1.5; color:#B9B4AA; width:1300px">&#8235;בוחרים גנטיקה לזכר ולנקבה, ורואים מה יכול לצאת מהזיווג, עם אחוזים&#8236;</p>
+<button class="opencalc" type="button" style="font:700 52px 'Rubik', Arial, sans-serif; color:#151513; background:#E3A83B; border:0; border-radius:28px; padding:34px 84px; cursor:pointer; box-shadow:0 18px 50px rgba(227,168,59,.25)">&#8235;פתחו את המחשבון&#8236;</button>
+<div style="display:flex; flex-direction:row; gap:18px; direction:ltr">
+<p style="font-size:30px; font-weight:600; background:#1B1A18; color:#F3F0E9; padding:12px 28px; border-radius:999px">Het Clown × Het Clown</p>
+<p style="font-size:30px; font-weight:600; background:#1B1A18; color:#F3F0E9; padding:12px 28px; border-radius:999px">Pastel × Pastel</p>
+<p style="font-size:30px; font-weight:600; background:#1B1A18; color:#F3F0E9; padding:12px 28px; border-radius:999px">Batman × Clown</p>
+</div>
+<img src="logo.jpg" alt="" style="position:absolute; left:128px; bottom:52px; width:96px; height:68px; object-fit:contain; mix-blend-mode:screen">
+</section>
 </div></div></div>
 <nav>
   <button id="prev" type="button" aria-label="השקף הקודם">→</button>
@@ -681,7 +736,29 @@
   <button id="full" type="button" aria-label="תצוגה לרוחב במסך מלא">⤢</button>
 </nav>
 </div>
-<div id="hint">לחצו על ⤢ כדי לראות לרוחב</div>
+<div id="calc" role="dialog" aria-label="מחשבון גנטיקה"><div class="cwrap">
+  <div class="chead"><h1>מחשבון גנטיקה</h1><button id="closecalc" type="button">חזרה למצגת</button></div>
+  <p class="csub">הוסיפו את הגנטיקה של הזכר ושל הנקבה, וקבלו את כל מה שיכול לצאת, עם אחוזים. אפשר לכתוב בעברית או באנגלית, למשל "הט קלאון", <bdi dir="ltr">Super Pastel</bdi> או <bdi dir="ltr">Highway</bdi>.</p>
+  <div class="cparents">
+    <div class="cpar"><h2>זכר ♂</h2><div class="cchips" id="c-chips-male"></div>
+      <div class="cinrow"><input id="c-in-male" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="הקלידו גן, למשל Clown"><button class="cadd" type="button" data-side="male" aria-label="הוספה לזכר">+</button></div>
+      <div class="csugs" id="c-sug-male" hidden></div></div>
+    <div class="cpar"><h2>נקבה ♀</h2><div class="cchips" id="c-chips-female"></div>
+      <div class="cinrow"><input id="c-in-female" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="הקלידו גן, למשל Pastel"><button class="cadd" type="button" data-side="female" aria-label="הוספה לנקבה">+</button></div>
+      <div class="csugs" id="c-sug-female" hidden></div></div>
+  </div>
+  <p class="chelp">לחיצה על גן שכבר נבחר משנה אותו. בגן רצסיבי: ויזואל, <bdi dir="ltr">Het</bdi>, <bdi dir="ltr">66% Het</bdi> ו־<bdi dir="ltr">50% Het</bdi>. בשאר הגנים: רגיל או <bdi dir="ltr">Super</bdi>.</p>
+  <div class="cexs"><span>דוגמאות:</span>
+    <button class="cex" type="button" data-m="Het Clown" data-f="Het Clown">Het Clown × Het Clown</button>
+    <button class="cex" type="button" data-m="Pastel" data-f="Pastel">Pastel × Pastel</button>
+    <button class="cex" type="button" data-m="Highway" data-f="">Highway × Normal</button>
+    <button class="cex" type="button" data-m="Batman" data-f="Clown">Batman × Clown</button>
+    <button id="c-clear" type="button">ניקוי</button>
+  </div>
+  <p class="ctitle">מה יכול לצאת</p>
+  <div id="c-results"></div>
+  <p class="cnote">האחוזים הם הסיכוי לכל ביצה, לא הבטחה לכל קלאץ'. המחשבון של RIL Ball Pythons.</p>
+</div></div><div id="hint">לחצו על ⤢ כדי לראות לרוחב</div>
 <div id="tip" role="dialog" aria-modal="true"><div>
 <b>רוצים מסך נקי לגמרי?</b><br>
 הדפדפן לא נותן לדף להסתיר את השורות שלו. אבל אפשר להוסיף את המצגת למסך הבית, ואז היא נפתחת כמו אפליקציה, בלי שום שורה:
@@ -713,6 +790,7 @@
   document.getElementById('prev').onclick = function () { show(i - 1); };
   // Hebrew reads right to left: the left arrow moves forward
   document.addEventListener('keydown', function (e) {
+    if (document.body.classList.contains('calcopen') || /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
     if (e.key === 'ArrowLeft' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(i + 1); }
     else if (e.key === 'ArrowRight' || e.key === 'PageUp') { e.preventDefault(); show(i - 1); }
     else if (e.key === 'Home') show(0);
@@ -787,6 +865,280 @@
   window.addEventListener('orientationchange', function () { setTimeout(layout, 200); });
   var start = parseInt((location.hash || '').slice(1), 10);
   layout(); show(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+  var VERIFIED = {
+    recessive: ['Albino', 'Amur', 'Axanthic', 'Burgundy Albino', 'Candino', 'Candy', 'Caramel Albino', 'Clown', 'Cryptic', 'Desert Ghost', 'Genetic Stripe', 'Hypo', 'Lavender Albino', 'Monarch', 'Monsoon', 'Orange Ghost', 'Piebald', 'Puzzle', 'Rainbow', 'Sunset', 'Toffee', 'Ultramel', 'Zebra'],
+    dominant: ['Acid', 'Cafe', 'Calico', 'Confusion', 'Harlequin', 'Nova', 'Nyala', 'Pinstripe', 'Static', 'Stranger', 'Sugar', 'Web'],
+    codom: ['Bamboo', 'Banana', 'Black Head', 'Black Pastel', 'Blade', 'Bongo', 'Butter', 'Champagne', 'Chocolate', 'Cinnamon', 'Copper', 'Cypress', 'Enchi', 'Fire', 'Genetic Banded', 'Ghi', 'Granite', 'Gravel', 'Grim', 'Hidden Gene Woma', 'Highway', 'Honey', 'Hurricane', 'Jolt', 'Jungle Woma', 'Lace', 'Leopard', 'Lesser', 'Lori', 'Mahogany', 'Mario', 'Microscale', 'Mocha', 'Mojave', 'Mystic', 'Mystic Potion', 'Orange Belly', 'Orange Dream', 'Pastel', 'Peach', 'Phantom', 'Puma', 'Raven', 'Red Stripe', 'Redhead', 'Russo', 'Sable', 'Scaleless Head', 'Shredder', 'Spark', 'Special', 'Spider', 'Splatter', 'Spotnose', 'Striker', 'Taronja', 'Trick', 'Twister', 'Vanilla', 'Woma', 'Yellow Belly']
+  };
+  // different names for the same gene: they are counted as one gene in the calculator
+  var ALIAS = { 'Pied': 'Piebald', 'Ghost': 'Hypo', 'Coral Glow': 'Banana', 'Amelanistic': 'Albino' };
+  // Allelic complexes: genes that sit on the SAME place in the genome, so a snake carries at most two copies in total
+  // and the calculator must treat them as one locus. Sources: Kinova Reptiles "Understanding Allelic Genes in Ball
+  // Pythons", ColdBlooded "Allelic Morphs aka Complexes", ReptiDex (members listed by at least two of them);
+  // Highway = Gravel + Yellow Belly per World of Ball Pythons; Super Stripe = Yellow Belly + Specter (Kinova, ReptiDex).
+  var COMPLEXES = [
+    { id: 'yb', label: 'Yellow Belly', mode: 'codom', genes: ['Yellow Belly', 'Specter', 'Spark', 'Gravel', 'Asphalt', 'Flare'], combos: { 'Gravel+Yellow Belly': 'Highway', 'Specter+Yellow Belly': 'Super Stripe' } },
+    { id: 'fire', label: 'Black Eyed Leucistic', mode: 'codom', genes: ['Fire', 'Flame', 'Vanilla', 'Sulfur', 'Disco'], any: 'Black Eyed Leucistic' },
+    { id: 'bel', label: 'Blue Eyed Leucistic', mode: 'codom', genes: ['Lesser', 'Butter', 'Mojave', 'Mocha', 'Phantom', 'Mystic', 'Russo', 'Special', 'Bamboo', 'Daddy'], any: 'Blue Eyed Leucistic' },
+    { id: 'cinny', label: 'Cinnamon / Black Pastel', mode: 'codom', genes: ['Black Pastel', 'Cinnamon', 'Enchi', 'Huffman'] },
+    { id: 'mahogany', label: 'Mahogany / Cinder', mode: 'codom', genes: ['Mahogany', 'Cinder'] },
+    { id: 'spider', label: 'Spider', mode: 'codom', genes: ['Spider', 'Champagne', 'Black Head', 'Chocolate', 'Cypress', 'Hidden Gene Woma', 'Woma', 'Spotnose', 'Wookie', 'Bongo'], combos: { 'Black Head+Spider': 'Black Head Spider' } },
+    { id: 'albino', label: 'Albino', mode: 'recessive', genes: ['Albino', 'Candy'], combos: { 'Albino+Candy': 'Candy Albino' } },
+    { id: 'clown', label: 'Clown', mode: 'recessive', genes: ['Clown', 'Cryptic'], combos: { 'Clown+Cryptic': 'Crypton' } }
+  ];
+  // named combinations that are really two alleles: typing one adds both
+  var COMBO_EXPAND = { 'highway': ['Gravel', 'Yellow Belly'], 'super stripe': ['Specter', 'Yellow Belly'] };
+  // not verified: best guess only, and flagged in the calculator
+  var GUESS_RECESSIVE = ['Axanthic TSK', 'Axanthic VPI', 'Ringer', 'Tri-Stripe'];
+  // well-known Super forms with their own name
+  var SUPER_ALIAS = { Mojave: 'Blue Eyed Leucistic', Lesser: 'Blue Eyed Leucistic', Butter: 'Blue Eyed Leucistic', 'Yellow Belly': 'Ivory', 'Scaleless Head': 'Scaleless' };
+  var GENE_NAMES = ['Acid', 'Albino', 'Axanthic', 'Axanthic TSK', 'Axanthic VPI', 'Banana', 'Bamboo', 'Black Head', 'Black Pastel', 'Blade', 'Bongo', 'Butter', 'Calico', 'Candino', 'Caramel Albino', 'Champagne', 'Chocolate', 'Cinnamon', 'Clown', 'Confusion', 'Coral Glow', 'Crawler', 'Cryptic', 'Cypress', 'Desert Ghost', 'Dinker', 'Discovery', 'Ember', 'Enchi', 'Fader', 'Fire', 'Firefly', 'Freeway', 'Ghi', 'Ghost', 'Genetic Banded', 'Genetic Stripe', 'Gold Blush', 'Granite', 'Gravel', 'Harlequin', 'Hidden Gene Woma', 'Highway', 'Hurricane', 'Hypo', 'Jolt', 'Lavender Albino', 'Leopard', 'Lemon Blast', 'Lemonback', 'Lesser', 'Mahogany', 'Mocha', 'Mojave', 'Monsoon', 'Monkey', 'Mystic', 'Mystic Potion', 'Nova', 'Orange Dream', 'Orange Ghost', 'Pastel', 'Pewter', 'Phantom', 'Piebald', 'Pinstripe', 'Puma', 'Puzzle', 'Quill', 'Rainbow', 'Redhead', 'Red Axanthic', 'Ringer', 'Sable', 'Sandblast', 'Scaleless Head', 'Sharp', 'Spark', 'Special', 'Spider', 'Spotnose', 'Stranger', 'Sulfur', 'Sunset', 'Tri-Stripe', 'Toffee', 'Ultramel', 'Vanilla', 'Woma', 'Yellow Belly', 'Zebra', 'Lace', 'Lori', 'Mario', 'Peach', 'Raven', 'Russo', 'Candy', 'Amur', 'Taronja', 'Asphalt', 'Cinder', 'Daddy', 'Disco', 'Flame', 'Flare', 'Huffman', 'Specter', 'Wookie', 'Burgundy Albino', 'Cafe', 'Grim', 'Honey', 'Jungle Woma', 'Microscale', 'Monarch', 'Nyala', 'Orange Belly', 'Red Stripe', 'Shredder', 'Splatter', 'Static', 'Striker', 'Sugar', 'Trick', 'Twister', 'Web', 'Copper'];
+  var HE_ALIAS = { 'קלאון': 'Clown', 'פסטל': 'Pastel', 'פייבלד': 'Piebald', 'פיבלד': 'Piebald', 'אלבינו': 'Albino', 'ספיידר': 'Spider', 'בננה': 'Banana', 'מוהאבי': 'Mojave', 'מוחאבי': 'Mojave', 'אנצי': 'Enchi', 'פייר': 'Fire', 'ליסר': 'Lesser', 'באטר': 'Butter', 'שמפיין': 'Champagne', 'קינמון': 'Cinnamon', 'פינסטריפ': 'Pinstripe', 'אקסנטיק': 'Axanthic', 'גוסט': 'Ghost', 'היפו': 'Hypo', 'פנטום': 'Phantom', 'וומה': 'Woma', 'ספוטנוז': 'Spotnose', 'אורנג דרים': 'Orange Dream', 'בלאק פסטל': 'Black Pastel', 'לבנדר אלבינו': 'Lavender Albino', 'קריפטיק': 'Cryptic', 'מיסטיק': 'Mystic', 'יילו בלי': 'Yellow Belly', 'ציץ': 'Chocolate' };
+
+  /* ================= the calculator (the same genetics engine as the RIL app) ================= */
+  // well-known morph names are really several genes: typing one adds all of them
+  var MORPH_SPLIT = {
+    'highway': [['Gravel', 1], ['Yellow Belly', 1]], 'super stripe': [['Specter', 1], ['Yellow Belly', 1]],
+    'freeway': [['Asphalt', 1], ['Yellow Belly', 1]], 'puma': [['Spark', 1], ['Yellow Belly', 1]], 'ivory': [['Yellow Belly', 2]],
+    'bumblebee': [['Pastel', 1], ['Spider', 1]], 'bumble bee': [['Pastel', 1], ['Spider', 1]], 'killer bee': [['Pastel', 2], ['Spider', 1]],
+    'pewter': [['Pastel', 1], ['Cinnamon', 1]], 'firefly': [['Pastel', 1], ['Fire', 1]], 'lemon blast': [['Pastel', 1], ['Pinstripe', 1]],
+    'spinner': [['Spider', 1], ['Pinstripe', 1]], 'pastave': [['Pastel', 1], ['Mojave', 1]], 'batman': [['Leopard', 1], ['Spotnose', 1], ['Clown', 2]],
+    'crypton': [['Clown', 1], ['Cryptic', 1]], 'purple passion': [['Phantom', 1], ['Mojave', 1]], 'mystic potion': [['Mystic', 1], ['Mojave', 1]],
+    'candy albino': [['Albino', 1], ['Candy', 1]]
+  };
+  var MORPH_TITLES = ['Batman', 'Bumblebee', 'Crypton', 'Firefly', 'Freeway', 'Highway', 'Ivory', 'Killer Bee', 'Lemon Blast', 'Pastave', 'Pewter', 'Puma', 'Purple Passion', 'Spinner', 'Super Stripe', 'Mystic Potion'];
+  function canon(name) {
+    var n = String(name || '').trim().toLowerCase(), k = Object.keys(ALIAS).find(function (a) { return a.toLowerCase() === n; });
+    return k ? ALIAS[k] : String(name || '').trim();
+  }
+  function inList(list, name) { var n = canon(name).toLowerCase(); return list.some(function (x) { return x.toLowerCase() === n; }); }
+  function complexOf(name) {
+    var n = canon(name).toLowerCase();
+    return COMPLEXES.find(function (c) { return c.genes.some(function (g) { return g.toLowerCase() === n; }); }) || null;
+  }
+  function geneMode(name) {
+    var cx = complexOf(name);
+    if (cx) return cx.mode;
+    if (inList(VERIFIED.recessive, name) || inList(GUESS_RECESSIVE, name)) return 'recessive';
+    if (inList(VERIFIED.dominant, name)) return 'dominant';
+    return 'codom';
+  }
+  function titleCase(s) { return String(s || '').trim().replace(/\s+/g, ' ').replace(/(^|[\s-])([a-z])/g, function (m, p, c) { return p + c.toUpperCase(); }); }
+  function heKey(s) { return String(s || '').replace(/['"׳’`]/g, '').replace(/\s+/g, ' ').trim(); }
+  function knownName(s) {
+    var k = heKey(s); if (HE_ALIAS[k]) return HE_ALIAS[k];
+    var low = k.toLowerCase(), hit = GENE_NAMES.concat(MORPH_TITLES).find(function (n) { return n.toLowerCase() === low; });
+    return hit || titleCase(k);
+  }
+  function splitPrefix(text) {
+    var m = /^\s*(?:(\d{1,3})\s*%\s*)?(?:poss(?:ible)?\.?\s*)?(het|super|הט|סופר)(?:\s+|$)(.*)$/i.exec(String(text));
+    if (!m) return null;
+    var kind = /^(het|הט)$/i.test(m[2]) ? 'het' : 'super', p = 1;
+    if (kind === 'het') {
+      if (m[1]) { var pc = +m[1]; p = pc === 66 ? 2 / 3 : pc === 33 ? 1 / 3 : pc / 100; }
+      else if (/poss/i.test(text)) p = 0.5;
+    }
+    return { kind: kind, p: Math.min(1, Math.max(0, p)), rest: m[3] };
+  }
+  var HET_STATES = [{ c: 2, p: 1 }, { c: 1, p: 1 }, { c: 1, p: 2 / 3 }, { c: 1, p: 0.5 }];
+  function stateIdx(c, p) { for (var i = 0; i < HET_STATES.length; i++) if (HET_STATES[i].c === c && Math.abs(HET_STATES[i].p - p) < 0.01) return i; return 0; }
+  function comp(name, mode, c, p, alias) {
+    if (mode === 'recessive') return c === 1 ? ((p != null && p < 0.999 ? Math.floor(p * 100 + 1e-9) : 100) + '% Het ' + name) : name;
+    if (mode === 'dominant') return c >= 2 ? name + ' (הומוזיגוט)' : name;
+    return c >= 2 ? 'Super ' + name + (alias && SUPER_ALIAS[canon(name)] ? ' (' + SUPER_ALIAS[canon(name)] + ')' : '') : name;
+  }
+  var calc = { male: [], female: [] };
+  function addGene(side, text) {
+    var sp = splitPrefix(text), raw = sp ? sp.rest : text, name = knownName(raw);
+    if (!name) return;
+    var list = calc[side], split = MORPH_SPLIT[name.toLowerCase()];
+    function put(n, c, p) {
+      var k = canon(n).toLowerCase(), ex = list.find(function (e) { return canon(e.name).toLowerCase() === k; });
+      if (ex) { ex.c = c; ex.p = p; } else list.push({ name: n, c: c, p: p });
+    }
+    if (split) { split.forEach(function (x) { put(x[0], geneMode(x[0]) === 'recessive' && x[1] === 1 ? 1 : x[1], 1); }); return; }
+    var mode = geneMode(name), c, p = 1;
+    if (sp && sp.kind === 'super') c = 2;
+    else if (sp && sp.kind === 'het' && mode === 'recessive') { c = 1; p = sp.p; }
+    else c = mode === 'recessive' ? 2 : 1;
+    put(name, c, p);
+  }
+  function toggleGene(side, i) {
+    var e = calc[side][i]; if (!e) return;
+    if (geneMode(e.name) === 'recessive') { var nx = HET_STATES[(stateIdx(e.c, e.p) + 1) % HET_STATES.length]; e.c = nx.c; e.p = nx.p; }
+    else { e.c = e.c === 2 ? 1 : 2; e.p = 1; }
+  }
+  var sawAllelic = false;
+  function comboName(cx, a, b, disp) {
+    sawAllelic = true;
+    var nm = cx && cx.combos && cx.combos[[a, b].sort().join('+')], pair = disp(a) + ' × ' + disp(b);
+    if (nm) return nm + ' (' + pair + ')';
+    if (cx && cx.any) return cx.any + ' (' + pair + ')';
+    return pair + ' (allelic)';
+  }
+  // named combos of genes from different loci (all must be visual; the whole name is shown before the gene list)
+  var NAMED = [
+    ['Batman', ['Leopard', 'Spotnose', 'Clown']], ['Killer Bee', ['Super Pastel', 'Spider']], ['Bumblebee', ['Pastel', 'Spider']],
+    ['Pewter', ['Pastel', 'Cinnamon']], ['Firefly', ['Pastel', 'Fire']], ['Lemon Blast', ['Pastel', 'Pinstripe']],
+    ['Spinner', ['Spider', 'Pinstripe']], ['Pastave', ['Pastel', 'Mojave']]
+  ];
+  function morphOf(parts) {
+    var hit = NAMED.find(function (n) { return n[1].every(function (g) { return parts.indexOf(g) !== -1; }); });
+    return hit ? hit[0] : '';
+  }
+  // Each gene is one locus; genes of one complex share a locus. A parent passes one allele per locus:
+  // a gene with c copies passes it with chance c/2 (times its certainty p), otherwise the normal allele ("~").
+  function calcResults() {
+    var loci = {}, warn = []; sawAllelic = false;
+    [['male', 'm'], ['female', 'f']].forEach(function (pr) {
+      calc[pr[0]].forEach(function (e) {
+        var cx = complexOf(e.name), k = cx ? 'cx:' + cx.id : 'g:' + canon(e.name).toLowerCase(), an = canon(e.name);
+        var L = loci[k] = loci[k] || { cx: cx, disp: {}, m: [], f: [], name: e.name };
+        L.disp[an] = L.disp[an] || e.name;
+        L[pr[1]].push({ a: an, c: e.c, p: e.p == null ? 1 : e.p });
+      });
+    });
+    var combos = [{ p: 1, parts: [] }];
+    Object.keys(loci).slice(0, 8).forEach(function (k) {
+      var L = loci[k], mode = L.cx ? L.cx.mode : geneMode(L.name);
+      function gam(list, side) {
+        var d = {}, rem = 2, s = 0;
+        list.forEach(function (x) { var cc = Math.min(x.c, rem); rem -= cc; if (cc > 0) d[x.a] = (d[x.a] || 0) + (cc / 2) * x.p; });
+        if (list.reduce(function (n, x) { return n + x.c; }, 0) > 2) warn.push((L.cx ? 'קומפלקס ' + L.cx.label : L.name) + (side === 'm' ? ' (זכר)' : ' (נקבה)'));
+        Object.keys(d).forEach(function (a) { s += d[a]; });
+        d['~'] = Math.max(0, 1 - s);
+        return d;
+      }
+      var gm = gam(L.m, 'm'), gf = gam(L.f, 'f'), geno = {};
+      Object.keys(gm).forEach(function (x) {
+        Object.keys(gf).forEach(function (y) {
+          var pr = gm[x] * gf[y]; if (pr <= 1e-12) return;
+          var key = [x, y].sort().join('|'); geno[key] = (geno[key] || 0) + pr;
+        });
+      });
+      function disp(a) { return L.disp[a] || a; }
+      var outs = [];
+      if (mode === 'recessive') {
+        var vis = {}, non = 0, carry = {};
+        Object.keys(geno).forEach(function (key) {
+          var ab = key.split('|'), pr = geno[key], w = ab.filter(function (z) { return z === '~'; }).length;
+          if (w === 0) { var lab = ab[0] === ab[1] ? disp(ab[0]) : comboName(L.cx, ab[0], ab[1], disp); vis[lab] = (vis[lab] || 0) + pr; }
+          else { non += pr; if (w === 1) { var al = ab[0] === '~' ? ab[1] : ab[0]; carry[al] = (carry[al] || 0) + pr; } }
+        });
+        Object.keys(vis).forEach(function (lab) { outs.push({ p: vis[lab], lab: lab }); });
+        var carriers = Object.keys(carry);
+        if (carriers.length > 1) {
+          var carried = 0;
+          carriers.forEach(function (al) { carried += carry[al]; outs.push({ p: carry[al], lab: 'Het ' + disp(al) }); });
+          if (non - carried > 1e-12) outs.push({ p: non - carried, lab: '' });
+        } else if (non > 1e-12) {
+          outs.push({ p: non, lab: carriers.map(function (al) {
+            var ph = carry[al] / non;
+            return (ph > 1 - 1e-9 ? '100' : Math.floor(ph * 100 + 1e-9)) + '% Het ' + disp(al);
+          }).join(' / ') });
+        }
+      } else {
+        var byLab = {};
+        Object.keys(geno).forEach(function (key) {
+          var ab = key.split('|'), pr = geno[key], w = ab.filter(function (z) { return z === '~'; }).length, lab;
+          if (w === 2) lab = '';
+          else if (w === 1) lab = disp(ab[0] === '~' ? ab[1] : ab[0]);
+          else if (ab[0] === ab[1]) lab = comp(disp(ab[0]), mode, 2, 1, true);
+          else lab = comboName(L.cx, ab[0], ab[1], disp);
+          byLab[lab] = (byLab[lab] || 0) + pr;
+        });
+        Object.keys(byLab).forEach(function (lab) { outs.push({ p: byLab[lab], lab: lab }); });
+      }
+      var next = [];
+      combos.forEach(function (c) { outs.forEach(function (o) { next.push({ p: c.p * o.p, parts: o.lab ? c.parts.concat(o.lab) : c.parts }); }); });
+      combos = next;
+    });
+    var out = {};
+    function isHet(x) { return /^(\d+% )?Het /.test(x); }
+    combos.forEach(function (c) {
+      var parts = c.parts.filter(function (x) { return !isHet(x); }).concat(c.parts.filter(isHet));
+      var k = parts.length ? parts.join(' × ') : 'רגיל (Normal)', nm = morphOf(c.parts);
+      if (nm) k = nm + ' (' + k + ')';
+      out[k] = (out[k] || 0) + c.p;
+    });
+    var res = Object.keys(out).map(function (k) { return { label: k, p: out[k] }; }).filter(function (r) { return r.p > 0.0001; }).sort(function (x, y) { return y.p - x.p; });
+    res.warn = warn; res.allelic = sawAllelic;
+    return res;
+  }
+
+  /* ---------- calculator screen ---------- */
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function chipLabel(e) { return comp(e.name, geneMode(e.name), e.c, e.p); }
+  function renderChips(side) {
+    document.getElementById('c-chips-' + side).innerHTML = calc[side].map(function (e, i) {
+      return '<span class="cchip"><button type="button" class="ctog" data-side="' + side + '" data-i="' + i + '" title="לחיצה מחליפה בין ויזואל / Het / 66% Het / 50% Het, או בין רגיל ל־Super">' + esc(chipLabel(e)) + '</button><button type="button" class="cdel" data-side="' + side + '" data-i="' + i + '" aria-label="הסרה">✕</button></span>';
+    }).join('');
+  }
+  function renderResults() {
+    var box = document.getElementById('c-results');
+    if (!calc.male.length && !calc.female.length) { box.innerHTML = '<p class="cnote">הוסיפו גנים לזכר ולנקבה, והתוצאות יופיעו כאן.</p>'; return; }
+    var res = calcResults(), all = res.map(function (r) { return r.label; }).join(' '), notes = '';
+    if (/\d+% Het/.test(all)) notes += '<p class="cnote">"66% Het": מבין הצאצאים שנראים רגילים, לשניים מכל שלושה יש את הגן. בעין אי אפשר להבדיל ביניהם.</p>';
+    if (res.allelic) notes += '<p class="cnote">שני גנים מאותו קומפלקס יושבים על אותו מקום בגנום. צאצא שקיבל אחד מכל הורה מקבל את השילוב שלהם, למשל Highway.</p>';
+    if (res.warn && res.warn.length) notes += '<p class="cnote cwarn">יותר משני עותקים על אותו מקום בגנום אצל: ' + res.warn.map(esc).join(', ') + '. לכל נחש יש רק שני עותקים, ולכן נספרו רק הראשונים.</p>';
+    if (/Super Spider|Super Champagne|Super Hidden Gene Woma|Champagne × Spider|Spider × Champagne/.test(all)) notes += '<p class="cnote cwarn">⚠ Super Spider, Super Champagne, Super Hidden Gene Woma והשילוב Spider × Champagne מדווחים כקטלניים. לא מומלץ לזווג כך.</p>';
+    if (/Super Cinnamon|Super Black Pastel/.test(all)) notes += '<p class="cnote cwarn">⚠ ל־Super Cinnamon ול־Super Black Pastel יש סיכון לאף שטוח (Duckbill) ולקינקים בעמוד השדרה.</p>';
+    box.innerHTML = res.slice(0, 30).map(function (r) {
+      return '<div class="cres"><div class="cres-top"><span class="cpct">' + (r.p * 100).toFixed(1).replace(/\.0$/, '') + '%</span><span class="clab" dir="ltr">' + esc(r.label) + '</span></div><div class="cbar"><i style="width:' + Math.max(2, r.p * 100) + '%"></i></div></div>';
+    }).join('') + (res.length > 30 ? '<p class="cnote">מוצגים 30 השילובים הסבירים ביותר.</p>' : '') + notes;
+  }
+  function refreshCalc() { renderChips('male'); renderChips('female'); renderResults(); }
+  function suggestions(q) {
+    var sp = splitPrefix(q), term = heKey(sp ? sp.rest : q).toLowerCase();
+    if (!term) return [];
+    var he = Object.keys(HE_ALIAS).filter(function (k) { return k.indexOf(term) === 0; }).map(function (k) { return HE_ALIAS[k]; });
+    var names = GENE_NAMES.concat(MORPH_TITLES).filter(function (n) { return n.toLowerCase().indexOf(term) === 0; });
+    var more = GENE_NAMES.concat(MORPH_TITLES).filter(function (n) { return n.toLowerCase().indexOf(term) > 0; });
+    var seen = {}, out = [];
+    he.concat(names, more).forEach(function (n) { if (!seen[n]) { seen[n] = 1; out.push(n); } });
+    var pre = sp ? (sp.kind === 'super' ? 'Super ' : (/^\s*\d/.test(q) ? Math.round(sp.p * 100) + '% ' : '') + 'Het ') : '';
+    return out.slice(0, 8).map(function (n) { return pre + n; });
+  }
+  function showSug(side) {
+    var inp = document.getElementById('c-in-' + side), box = document.getElementById('c-sug-' + side), list = suggestions(inp.value);
+    box.innerHTML = list.map(function (n) { return '<button type="button" class="csug" data-side="' + side + '" data-name="' + esc(n) + '" dir="ltr">' + esc(n) + '</button>'; }).join('');
+    box.hidden = !list.length;
+  }
+  function commit(side, text) {
+    var inp = document.getElementById('c-in-' + side);
+    text = String(text || inp.value).trim(); if (!text) return;
+    addGene(side, text); inp.value = ''; document.getElementById('c-sug-' + side).hidden = true; refreshCalc();
+  }
+  function openCalc() { document.body.classList.add('calcopen'); refreshCalc(); document.getElementById('calc').scrollTop = 0; }
+  function closeCalc() { document.body.classList.remove('calcopen'); }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('button') : null; if (!t) return;
+    if (t.id === 'opencalc' || t.classList.contains('opencalc')) { e.stopPropagation(); openCalc(); return; }
+    if (t.id === 'closecalc') { closeCalc(); return; }
+    if (t.classList.contains('csug')) { commit(t.dataset.side, t.dataset.name); return; }
+    if (t.classList.contains('cadd')) { commit(t.dataset.side); return; }
+    if (t.classList.contains('ctog')) { toggleGene(t.dataset.side, +t.dataset.i); refreshCalc(); return; }
+    if (t.classList.contains('cdel')) { calc[t.dataset.side].splice(+t.dataset.i, 1); refreshCalc(); return; }
+    if (t.classList.contains('cex')) {
+      calc = { male: [], female: [] };
+      t.dataset.m.split('|').filter(Boolean).forEach(function (g) { addGene('male', g); });
+      t.dataset.f.split('|').filter(Boolean).forEach(function (g) { addGene('female', g); });
+      refreshCalc(); return;
+    }
+    if (t.id === 'c-clear') { calc = { male: [], female: [] }; refreshCalc(); }
+  }, true);
+  ['male', 'female'].forEach(function (side) {
+    var inp = document.getElementById('c-in-' + side);
+    inp.addEventListener('input', function () { showSug(side); });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); var f = document.querySelector('#c-sug-' + side + ' .csug'); commit(side, f && !document.getElementById('c-sug-' + side).hidden ? f.dataset.name : inp.value); } });
+  });
+  window.RILCalc = { open: openCalc, close: closeCalc };
+
 })();
 </script>
 </body>
