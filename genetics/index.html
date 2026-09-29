@@ -764,6 +764,7 @@
   // the browser's own bars cannot be hidden from a page; opened from the home screen there are none, so say how, once
   var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches);
   function tipOnce() {
+    return; // the home-screen tip is off: it was too complicated for customers
     if (standalone) return;
     try { if (localStorage.getItem('ril-genetics-tip')) return; localStorage.setItem('ril-genetics-tip', '1'); } catch (e) {}
     document.getElementById('tip').classList.add('on');
