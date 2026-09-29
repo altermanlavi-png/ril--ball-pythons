@@ -2892,6 +2892,8 @@ var qrcode = function() {
     window.addEventListener('online', function back() { window.removeEventListener('online', back); if (!cloud.on && firebase.auth().currentUser) cloudStart().catch(function () {}); });
   }
   var loginEl = null;
+  var EYE_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_OFF_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7c2 0 3.7.7 5.1 1.6M22 12s-3.6 7-10 7c-2 0-3.7-.7-5.1-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
   function loginShow(msg) {
     if (!loginEl) {
       loginEl = document.createElement('div');
@@ -2901,7 +2903,9 @@ var qrcode = function() {
         '<div style="height:120px;background:var(--logo) center / contain no-repeat"></div>' +
         '<div style="color:#aaa;font-size:.9rem">כניסה למערכת</div>' +
         '<input id="loginMail" type="email" autocomplete="username" placeholder="מייל" dir="ltr" style="padding:13px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:1rem">' +
-        '<input id="loginPass" type="password" autocomplete="current-password" placeholder="סיסמה (לפחות 6 תווים)" dir="ltr" style="padding:13px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:1rem">' +
+        '<div style="position:relative;display:flex">' +
+        '<input id="loginPass" type="password" autocomplete="current-password" placeholder="סיסמה (לפחות 6 תווים)" dir="ltr" style="flex:1;min-width:0;padding:13px 13px 13px 52px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:1rem">' +
+        '<button id="loginEye" type="button" aria-label="הצגת הסיסמה" aria-pressed="false" style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;background:none;color:#aaa;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0">' + EYE_SVG + '</button></div>' +
         '<div id="loginMsg" style="min-height:1.3em;color:#ff8a8a;font-size:.85rem"></div>' +
         '<button id="loginIn" type="button" style="padding:13px;border-radius:12px;border:0;background:#fff;color:#000;font-weight:700;font-size:1rem">כניסה</button>' +
         '<button id="loginUp" type="button" style="padding:12px;border-radius:12px;border:1px solid #555;background:none;color:#fff;font-size:.95rem">הרשמה חדשה</button>' +
@@ -2931,6 +2935,16 @@ var qrcode = function() {
         firebase.auth().sendPasswordResetEmail(m).then(function () { loginShow('נשלח מייל לאיפוס סיסמה, בדקי גם בספאם'); }).catch(function (e) { loginShow(fbErr(e)); });
       };
       document.getElementById('loginPass').onkeydown = function (e) { if (e.key === 'Enter') go(false); };
+      // the eye shows the password as plain text, so you can check it was typed right
+      document.getElementById('loginEye').onclick = function () {
+        var pi = document.getElementById('loginPass'), show = pi.type === 'password';
+        pi.type = show ? 'text' : 'password';
+        this.innerHTML = show ? EYE_OFF_SVG : EYE_SVG;
+        this.setAttribute('aria-label', show ? 'הסתרת הסיסמה' : 'הצגת הסיסמה');
+        this.setAttribute('aria-pressed', show ? 'true' : 'false');
+        this.style.color = show ? '#E3A83B' : '#aaa';
+        try { pi.focus({ preventScroll: true }); } catch (e) { pi.focus(); }
+      };
     }
     loginEl.style.display = 'flex';
     document.getElementById('loginForm').style.visibility = 'visible';
