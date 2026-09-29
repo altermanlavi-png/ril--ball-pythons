@@ -334,6 +334,36 @@
   .scard.sres .simg { filter: grayscale(.55) brightness(.75); }
   .sresnote { font-weight: 700; color: var(--amber); }
   .sacts { display: flex; gap: 6px; }
+  .carebox { margin-top: 12px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; gap: 10px; }
+  .carebox b { display: block; font-size: 1.02rem; }
+  .carebox small { display: block; color: var(--muted); font-size: .82rem; margin-top: 2px; }
+  /* certificate for the buyer (white paper) */
+  .certprev { background: #fff; border-radius: 14px; padding: 16px; overflow-x: auto; }
+  .cert { background: #fff; color: #000; direction: rtl; text-align: right; font-family: Heebo, Arial, sans-serif; border: 2px solid #000; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 300px; }
+  .cert .c-head { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #000; padding-bottom: 12px; }
+  .cert .c-logo { width: 90px; filter: invert(1); flex: none; }
+  .cert .c-title { font-size: 1.6rem; font-weight: 800; line-height: 1.1; }
+  .cert .c-sub { font-size: .85rem; color: #333; margin-top: 4px; }
+  .cert .c-body { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+  .cert .c-photo { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; flex: none; }
+  .cert .c-table { flex: 1; min-width: 200px; border-collapse: collapse; font-size: .92rem; }
+  .cert .c-table th { text-align: right; font-weight: 700; padding: 5px 0 5px 12px; white-space: nowrap; vertical-align: top; width: 1%; }
+  .cert .c-table td { padding: 5px 0; border-bottom: 1px solid #ddd; }
+  .cert .c-genes { display: inline-block; text-align: left; font-weight: 600; }
+  .cert .c-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; border-top: 2px solid #000; padding-top: 12px; }
+  .cert .c-qr { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: .72rem; width: 96px; text-align: center; }
+  .cert .c-qr svg { width: 88px; height: 88px; display: block; }
+  .cert .c-sign { flex: 1; max-width: 240px; font-size: .85rem; display: flex; flex-direction: column; gap: 6px; }
+  .cert .c-line { border-bottom: 1px solid #000; height: 34px; }
+  @media print {
+    #printArea .cert { width: 180mm; margin: 0 auto; font-size: 12pt; border-width: 0.6mm; padding: 8mm; gap: 6mm; }
+    #printArea .cert .c-logo { width: 38mm; }
+    #printArea .cert .c-title { font-size: 26pt; }
+    #printArea .cert .c-photo { width: 60mm; height: 60mm; }
+    #printArea .cert .c-table { font-size: 12pt; }
+    #printArea .cert .c-qr { width: 34mm; font-size: 9pt; }
+    #printArea .cert .c-qr svg { width: 30mm; height: 30mm; }
+  }
   /* printable QR sign (white paper) */
   .posterprev { background: #fff; border-radius: 14px; padding: 18px; }
   .poster { background: #fff; color: #000; text-align: center; direction: rtl; font-family: Heebo, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -3486,6 +3516,8 @@ var qrcode = function() {
     var h = head('עסק', 'הכנסות, הוצאות, לקוחות והחשבון שלך', '');
     var fs = db.snakes.filter(function (s) { return s.status === 'forsale'; }).length;
     h += '<button class="shoplink" type="button" data-act="goshop"><span><b>קטלוג למכירה</b><small>' + (fs ? fs + (fs === 1 ? ' נחש זמין' : ' נחשים זמינים') + ' · להראות ללקוח או לשתף' : 'עוד אין נחשים שמסומנים "למכירה"') + '</small></span><span aria-hidden="true">‹</span></button>';
+    h += '<div class="carebox"><div><b>מדריך טיפול ללקוח</b><small>דף של RIL עם טמפרטורה, לחות, האכלה, התנשלות וסימני אזהרה. שולחים לכל מי שקונה נחש.</small></div>' +
+      '<div class="row"><button class="btn btn-soft" type="button" data-act="copycare">🔗 העתקת קישור</button><button class="btn btn-soft" type="button" data-act="opencare">פתיחה</button></div></div>';
     h += businessHtml() + waitlistHtml();
     h += '<div class="section"><div class="section-head"><h2 class="section-title">תזכורות</h2></div>' +
       '<label class="tgl"><input type="checkbox" id="remindTgl"' + (db.remindFeed !== false ? ' checked' : '') + '> תזכורת יום לפני האכלה (במסך הבית)</label>' +
@@ -3902,7 +3934,7 @@ var qrcode = function() {
       (s.status === 'breeder' ? spec('ערך הנחש', Number(s.value) > 0 ? Number(s.value).toLocaleString('he-IL') + ' ₪' : '') : spec('מחיר מכירה', Number(s.salePrice) > 0 ? Number(s.salePrice).toLocaleString('he-IL') + ' ₪' : '')) + spec('קונה', s.buyer) + spec('תאריך מכירה', s.soldDate ? fmtDate(s.soldDate) : '') +
       (s.status === 'reserved' ? spec('שמור ל', s.reservedFor) + spec('מקדמה', Number(s.deposit) > 0 ? Number(s.deposit).toLocaleString('he-IL') + ' ₪' : '') : '') + '</div>';
     if (s.notes) h += '<p style="margin-top:14px;white-space:pre-wrap;color:var(--muted)">' + esc(s.notes) + '</p>';
-    h += '<div class="section"><div class="row"><button class="btn btn-primary" type="button" data-act="feedform" data-id="' + s.id + '">+ תיעוד האכלה</button><button class="btn btn-soft" type="button" data-act="sharecard" data-id="' + s.id + '">כרטיס מכירה</button></div>' +
+    h += '<div class="section"><div class="row"><button class="btn btn-primary" type="button" data-act="feedform" data-id="' + s.id + '">+ תיעוד האכלה</button><button class="btn btn-soft" type="button" data-act="sharecard" data-id="' + s.id + '">כרטיס מכירה</button><button class="btn btn-soft" type="button" data-act="cert" data-id="' + s.id + '">תעודה לקונה</button></div>' +
       '<div class="row" style="margin-top:10px"><button class="btn btn-ghost" type="button" data-act="addshed" data-id="' + s.id + '">+ התנשלות</button><button class="btn btn-ghost" type="button" data-act="healthform" data-id="' + s.id + '">+ בריאות</button><button class="btn btn-ghost" type="button" data-act="label" data-id="' + s.id + '">תווית להדפסה</button></div></div>';
     if (wsAll.length > 1) {
       h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">משקל</h3>' + weightChartSvg(wsAll) + ws.map(function (w, i) {
@@ -4007,6 +4039,7 @@ var qrcode = function() {
     else if (ui.sheet.type === 'pair') sh.innerHTML = pairFormHtml();
     else if (ui.sheet.type === 'goal') sh.innerHTML = goalSheetHtml();
     else if (ui.sheet.type === 'shopqr') sh.innerHTML = shopQrSheetHtml();
+    else if (ui.sheet.type === 'cert') { if (!s) return closeSheet(); sh.innerHTML = certSheetHtml(s); }
     else if (ui.sheet.type === 'expense') sh.innerHTML = expenseFormHtml();
     else if (ui.sheet.type === 'wait') sh.innerHTML = waitFormHtml();
     else if (ui.sheet.type === 'label') sh.innerHTML = labelSheetHtml();
@@ -4895,6 +4928,37 @@ var qrcode = function() {
     if (ui.customer) h += '<button class="custexit" type="button" data-act="customer" aria-label="יציאה מתצוגה ללקוח">✕</button>';
     return h;
   }
+  /* ---------- care guide link + certificate for the buyer ---------- */
+  function careUrl() { return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'care/'; }
+  function parentCertRow(label, id, text) {
+    var p = snakeById(id);
+    if (p) return '<tr><th>' + label + '</th><td>' + esc(sname(p)) + ((p.genes || []).length ? '<br><span dir="ltr" class="c-genes">' + esc(p.genes.join(' × ')) + '</span>' : '') + '</td></tr>';
+    return text ? '<tr><th>' + label + '</th><td>' + esc(text) + '</td></tr>' : '';
+  }
+  function certHtml(s) {
+    var photo = (s.photos && s.photos[0]) || s.photo, mn = morphNames(s.genes), buyer = s.status === 'sold' ? s.buyer : s.status === 'reserved' ? s.reservedFor : '';
+    function row(k, v, ltr) { return v ? '<tr><th>' + k + '</th><td' + (ltr ? ' dir="ltr" class="c-genes"' : '') + '>' + esc(v) + '</td></tr>' : ''; }
+    return '<div class="cert"><div class="c-head"><img class="c-logo" src="' + LOGO + '" alt="RIL Ball Pythons"><div><div class="c-title">תעודת מקור</div><div class="c-sub">פיתון מתכדר (Ball Python) מגידול RIL Ball Pythons</div></div></div>' +
+      '<div class="c-body">' + (photo ? '<img class="c-photo" src="' + photo + '" alt="">' : '') +
+      '<table class="c-table">' + row('מספר', s.code) + row('שם', s.name) + row('מין', s.sex === 'male' ? 'זכר ♂' : s.sex === 'female' ? 'נקבה ♀' : '') +
+      row('תאריך בקיעה', s.hatch ? fmtDate(s.hatch) : '') + row('משקל', s.weight ? s.weight + ' גרם' : '') +
+      row('גנטיקה', (s.genes || []).length ? s.genes.join(' × ') : 'Normal', true) + row('מורף', mn.join(', '), true) +
+      parentCertRow('אב', s.fatherId, s.fatherText) + parentCertRow('אם', s.motherId, s.motherText) +
+      row('קונה', buyer) + row('תאריך מכירה', s.soldDate ? fmtDate(s.soldDate) : '') + '</table></div>' +
+      '<div class="c-foot"><div class="c-qr">' + qrSvg(careUrl()) + '<span>מדריך טיפול: סרקו את הקוד</span></div>' +
+      '<div class="c-sign"><div>חתימת המגדל</div><div class="c-line"></div><div>תאריך: ' + fmtDate(todayISO()) + '</div></div></div></div>';
+  }
+  function certSheetHtml(s) {
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="back" aria-label="חזרה">✕</button></div><h2 class="sheet-title">תעודה לקונה</h2>' +
+      '<p class="note" style="margin-bottom:12px">מדפיסים ונותנים לקונה עם הנחש. ב"הדפסה" אפשר גם לבחור "שמירה כ־PDF" ולשלוח בוואטסאפ.</p>' +
+      '<div class="certprev">' + certHtml(s) + '</div>' +
+      '<div class="row" style="margin-top:14px"><button class="btn btn-primary" type="button" data-act="printcert" data-id="' + s.id + '">הדפסה או PDF</button><button class="btn btn-ghost" type="button" data-act="back">חזרה</button></div>';
+  }
+  function printCert(id) {
+    var s = snakeById(id), pa = document.getElementById('printArea'); if (!s || !pa) return;
+    pa.innerHTML = certHtml(s);
+    try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
+  }
   // a printable sign: logo, title and a big QR code that opens the customer catalog
   function shopPosterHtml() {
     return '<div class="poster"><img class="p-logo" src="' + LOGO + '" alt="RIL Ball Pythons"><div class="p-title">פיתונים מתכדרים זמינים לקנייה</div>' +
@@ -4994,7 +5058,7 @@ var qrcode = function() {
       case 'open': openSheet({ type: 'detail', id: id }); break;
       case 'edit': openForm(id); break;
       case 'close': closeSheet(); break;
-      case 'back': if (form && form.id) { ui.sheet = { type: 'detail', id: form.id }; form = null; renderSheet(); } else if (ui.sheet && (ui.sheet.type === 'feed' || ui.sheet.type === 'health' || ui.sheet.type === 'share' || (ui.sheet.type === 'label' && ui.sheet.id))) { ui.sheet = { type: 'detail', id: ui.sheet.id }; renderSheet(); } else closeSheet(); break;
+      case 'back': if (form && form.id) { ui.sheet = { type: 'detail', id: form.id }; form = null; renderSheet(); } else if (ui.sheet && (ui.sheet.type === 'feed' || ui.sheet.type === 'health' || ui.sheet.type === 'share' || ui.sheet.type === 'cert' || (ui.sheet.type === 'label' && ui.sheet.id))) { ui.sheet = { type: 'detail', id: ui.sheet.id }; renderSheet(); } else closeSheet(); break;
       case 'sort': ui.sort = el.dataset.v; renderPage(); break;
       case 'status': ui.status = el.dataset.v; renderPage(); break;
       case 'quickfeed': quickFeed(id); break;
@@ -5029,6 +5093,10 @@ var qrcode = function() {
       case 'goshop': ui.tab = 'shop'; ui.customer = false; hideSug(); renderPage(); window.scrollTo(0, 0); shopSync(); break;
       case 'copyshoplink': copyShopLink(); break;
       case 'copysnakelink': copyShopLink(id); break;
+      case 'copycare': (navigator.clipboard ? navigator.clipboard.writeText(careUrl()) : Promise.reject()).then(function () { toast('הקישור למדריך הטיפול הועתק'); }).catch(function () { window.prompt('העתיקו את הקישור:', careUrl()); }); break;
+      case 'opencare': window.open(careUrl(), '_blank'); break;
+      case 'cert': openSheet({ type: 'cert', id: id }); break;
+      case 'printcert': printCert(id); break;
       case 'shopqr': if (!shopUrl()) { toast('קוד ה־QR זמין אחרי כניסה לחשבון'); break; } shopSync(); openSheet({ type: 'shopqr' }); break;
       case 'printshopqr': printShopQr(); break;
       case 'customer': ui.customer = !ui.customer; document.body.classList.toggle('customer', ui.customer); renderPage(); window.scrollTo(0, 0); break;
