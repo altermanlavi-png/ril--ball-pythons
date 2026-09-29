@@ -296,6 +296,20 @@
   .warnbox.red { background: var(--red-soft); border-color: var(--red); }
   .dot.k-health, .bar.k-health { background: var(--red); }
   .selbar { flex-wrap: wrap; }
+  /* incubation, projects, business */
+  .incbar { display: block; height: 6px; border-radius: 9px; background: var(--surface2); overflow: hidden; margin-top: 8px; direction: rtl; }
+  .incbar i { display: block; height: 100%; background: var(--amber); border-radius: 9px; }
+  .incform { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; align-items: end; margin: 14px 0 6px; }
+  .incform .field { margin-bottom: 10px; }
+  .incform label:nth-child(3), .incform button { grid-column: 1 / -1; }
+  .incform button { margin-bottom: 8px; }
+  .goal-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .goal-row small { display: block; color: var(--muted); margin-top: 2px; }
+  .goal-row .btn { flex: none; min-height: 40px; padding: 8px 12px; font-size: .85rem; }
+  .catrow { padding: 8px 0; }
+  .catrow .r1 { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; }
+  .catrow .bar { background: var(--amber); }
+  .pair-card.wdone { opacity: .55; }
   .selbar .btn { padding: 8px 12px; }
 
   .grid2 > * { min-width: 0; }
@@ -2763,6 +2777,9 @@ var qrcode = function() {
     d.calc = normCalc(d.calc);
     d.events = Array.isArray(d.events) ? d.events : [];
     d.pairs = Array.isArray(d.pairs) ? d.pairs : [];
+    d.goals = Array.isArray(d.goals) ? d.goals : [];
+    d.expenses = Array.isArray(d.expenses) ? d.expenses : [];
+    d.waitlist = Array.isArray(d.waitlist) ? d.waitlist : [];
     d.created = d.created || todayISO();
     return d;
   }
@@ -2772,8 +2789,13 @@ var qrcode = function() {
   // mirrored to the artifact database: one document per snake / pairing / event, and photos in their own documents
   // (a document may not exceed 256 KiB). A device that opens the link later loads the cloud copy.
   var cloud = { owner: true, verifying: false, fb: false, email: '', db: null, on: false, last: {}, timer: null, busy: false, dirty: false, error: '', toasted: false };
+  // "pending" = this device has changes the cloud has not received yet (e.g. made with no internet).
+  // While it is set, the next start uploads this device's data instead of replacing it with the cloud copy.
+  function setPending(on) { try { if (on) localStorage.setItem(KEY + '-pending', '1'); else localStorage.removeItem(KEY + '-pending'); } catch (e) {} }
+  function isPending() { try { return localStorage.getItem(KEY + '-pending') === '1'; } catch (e) { return false; } }
   function save() {
     var ok = localWrite();
+    if (ok && cloud.fb) setPending(true);
     if (ok && cloud.on) { cloud.dirty = true; clearTimeout(cloud.timer); cloud.timer = setTimeout(cloudSync, 900); }
     return ok;
   }
@@ -2786,7 +2808,9 @@ var qrcode = function() {
     });
     db.pairs.forEach(function (p) { docs['pairs/' + p.id] = p; });
     (db.events || []).forEach(function (e) { docs['events/' + e.id] = e; });
-    docs['meta/app'] = { remindFeed: db.remindFeed !== false, customGenes: db.customGenes, draftGenes: db.draftGenes, calc: db.calc, labelOpts: db.labelOpts || {}, lastBackup: db.lastBackup || '', snoozeUntil: db.snoozeUntil || '', created: db.created || '' };
+    (db.expenses || []).forEach(function (x) { docs['expenses/' + x.id] = x; });
+    (db.waitlist || []).forEach(function (w) { docs['waitlist/' + w.id] = w; });
+    docs['meta/app'] = { remindFeed: db.remindFeed !== false, customGenes: db.customGenes, draftGenes: db.draftGenes, calc: db.calc, labelOpts: db.labelOpts || {}, lastBackup: db.lastBackup || '', snoozeUntil: db.snoozeUntil || '', created: db.created || '', goals: db.goals || [] };
     return docs;
   }
   // one place that knows where a document lives: Claude's database keeps folders, Firebase keeps one flat 'team' collection
@@ -2814,6 +2838,7 @@ var qrcode = function() {
       for (var j = 0; j < old.length; j++) { if (!(old[j] in want)) { await cDoc(old[j]).delete(); delete cloud.last[old[j]]; } }
       cloud.error = tooBig ? 'too_large' : '';
       if (tooBig && !cloud.toasted) { cloud.toasted = true; toast('כרטיס או תמונה גדולים מדי לענן ולא סונכרנו'); }
+      if (!cloud.dirty) setPending(false);
     } catch (e) {
       cloud.error = (e && e.code) || 'error'; cloud.dirty = true;
       if (!cloud.toasted) { cloud.toasted = true; toast('הסנכרון לענן נכשל. הנתונים שמורים במכשיר ויסונכרנו בהמשך'); }
@@ -2824,16 +2849,16 @@ var qrcode = function() {
   // returns 'uploaded' (the cloud was empty, so this device's data goes up) or 'loaded' (the cloud copy replaced the local one)
   async function cloudLoad() {
     var d = cloud.db;
-    var r = await Promise.all([cAll('snakes'), cAll('pairs'), cAll('events'), cAll('photos'), cDoc('meta/app').get()]);
-    var snakes = r[0], pairs = r[1], events = r[2], photos = r[3], meta = r[4];
-    if (!(snakes.size || pairs.size || events.size || meta.exists)) { cloud.last = {}; cloud.dirty = true; return 'uploaded'; }
+    var r = await Promise.all([cAll('snakes'), cAll('pairs'), cAll('events'), cAll('photos'), cDoc('meta/app').get(), cAll('expenses'), cAll('waitlist')]);
+    var snakes = r[0], pairs = r[1], events = r[2], photos = r[3], meta = r[4], expenses = r[5], waitlist = r[6];
+    if (!(snakes.size || pairs.size || events.size || meta.exists || expenses.size || waitlist.size)) { cloud.last = {}; cloud.dirty = true; return 'uploaded'; }
     var m = meta.exists ? JSON.parse(JSON.stringify(meta.data())) : {}, byS = {};
     photos.docs.forEach(function (x) { var v = x.data(); (byS[v.sid] = byS[v.sid] || [])[v.i] = v.d; });
     function body(x) { return JSON.parse(JSON.stringify(x.data())); }
     var nd = {
       snakes: snakes.docs.map(function (x) { var s = body(x), ph = (byS[s.id] || []).filter(Boolean); s.photos = ph; s.photo = ph[0] || ''; delete s.photoCount; return s; }),
-      pairs: pairs.docs.map(body), events: events.docs.map(body),
-      remindFeed: m.remindFeed, customGenes: m.customGenes, draftGenes: m.draftGenes, calc: m.calc, labelOpts: m.labelOpts, lastBackup: m.lastBackup, snoozeUntil: m.snoozeUntil, created: m.created
+      pairs: pairs.docs.map(body), events: events.docs.map(body), expenses: expenses.docs.map(body), waitlist: waitlist.docs.map(body),
+      remindFeed: m.remindFeed, customGenes: m.customGenes, draftGenes: m.draftGenes, calc: m.calc, labelOpts: m.labelOpts, lastBackup: m.lastBackup, snoozeUntil: m.snoozeUntil, created: m.created, goals: m.goals
     };
     if (db.snakes.length) { try { localStorage.setItem(KEY + '-before-cloud', JSON.stringify(db)); } catch (e) {} } // safety copy of what this device had
     db = normDb(nd);
@@ -2845,11 +2870,26 @@ var qrcode = function() {
   }
   // ---- Firebase (Google) mode: used when the page is hosted on its own address and the Firebase scripts loaded ----
   var FB_CFG = { apiKey: 'AIzaSyAhHHuHhcMuiDZAnxR6LlyHporQJCn6bUw', authDomain: 'ril-ball-pythons.firebaseapp.com', projectId: 'ril-ball-pythons', storageBucket: 'ril-ball-pythons.firebasestorage.app', messagingSenderId: '31867361524', appId: '1:31867361524:web:c5c2063da8cc6cfb4ee6a1' };
+  // changes made with no internet: note what the cloud holds now (so deletions are sent too), then upload this device's data
+  async function cloudPushLocal() {
+    var s = await fbBase().get();
+    cloud.last = {};
+    s.docs.forEach(function (x) { cloud.last[x.id.replace('__', '/')] = JSON.stringify(x.data()); });
+    cloud.dirty = true;
+    return 'pushed';
+  }
   function cloudStart() {
-    return cloudLoad().then(function (how) {
+    var pushing = cloud.fb && isPending();
+    return (pushing ? cloudPushLocal() : cloudLoad()).then(function (how) {
       cloud.on = true; cloud.error = '';
-      if (how === 'uploaded') { cloudSync(); toast('הנתונים הועלו לענן'); } else { renderPage(); }
+      if (how === 'uploaded' || how === 'pushed') { cloudSync(); toast(how === 'pushed' ? 'השינויים ששמרתם במכשיר עלו לענן' : 'הנתונים הועלו לענן'); }
+      renderPage();
     });
+  }
+  // with no internet the app opens from what is saved on this device; the cloud catches up when the connection returns
+  function startOffline() {
+    loginHide(); renderPage(); openDeepLink();
+    window.addEventListener('online', function back() { window.removeEventListener('online', back); if (!cloud.on && firebase.auth().currentUser) cloudStart().catch(function () {}); });
   }
   var loginEl = null;
   function loginShow(msg) {
@@ -2929,7 +2969,8 @@ var qrcode = function() {
       if (!u.emailVerified) { if (!cloud.verifying) auth.signOut().then(function () { loginShow('המייל עוד לא אומת. היכנסי שוב כדי לקבל מייל אימות חדש.'); }); return; }
       loginCover(); // signed in: black screen with the logo while the collection loads
       cloud.db = fs; cloud.uid = u.uid; cloud.email = u.email || ''; 
-      try { var prev = localStorage.getItem(KEY + '-uid'); if (prev && prev !== cloud.uid) { db = normDb({}); localWrite(); } localStorage.setItem(KEY + '-uid', cloud.uid); } catch (e) {}
+      try { var prev = localStorage.getItem(KEY + '-uid'); if (prev && prev !== cloud.uid) { db = normDb({}); localWrite(); setPending(false); } localStorage.setItem(KEY + '-uid', cloud.uid); } catch (e) {}
+      if (navigator.onLine === false) return startOffline();
       cloudStart().then(function () { loginHide(); openDeepLink(); }).catch(function (e) {
         cloud.error = (e && e.code) || 'error';
         if (cloud.error === 'permission-denied') { auth.signOut().then(function () { loginShow(fbErr(e)); }); }
@@ -3173,6 +3214,7 @@ var qrcode = function() {
     var t = {}, g = inp.dataset.gene;
     if (g === 'filter') ui.geneFilter.forEach(function (n) { t[canon(n).toLowerCase()] = true; });
     else if (g === 'snake') formGenes().forEach(function (n) { t[canon(parseGene(n).name).toLowerCase()] = true; });
+    else if (g === 'goal') (goalForm ? goalForm.genes : []).forEach(function (n) { t[canon(parseGene(n).name).toLowerCase()] = true; });
     else db.calc[g === 'calcm' ? 'male' : 'female'].forEach(function (e) { t[canon(e.name).toLowerCase()] = true; });
     return t;
   }
@@ -3208,6 +3250,7 @@ var qrcode = function() {
     inp.value = ''; inp._q = '';
     hideSug();
     if (inp.dataset.gene === 'filter') addFilterGene(g.name);
+    else if (inp.dataset.gene === 'goal') addGoalGene(text);
     else if (inp.dataset.gene === 'snake') addFormGene(comp(g.name, g.mode, g.copies, g.p));
     else addCalcGene(inp.dataset.gene === 'calcm' ? 'male' : 'female', g.name, g.copies, g.p);
     save();
@@ -3234,6 +3277,7 @@ var qrcode = function() {
     if (e.key === 'Backspace' && !inp.value) {
       var g = inp.dataset.gene, side = g === 'calcm' ? 'male' : g === 'calcf' ? 'female' : '';
       if (g === 'filter' && ui.geneFilter.length) { ui.geneFilter.pop(); refreshFilter(); return true; }
+      if (g === 'goal' && goalForm && goalForm.genes.length) { goalForm.genes.pop(); document.getElementById('chips-goal').innerHTML = goalChipsHtml(); return true; }
       if (g === 'snake' && formGenes().length) { formGenes().pop(); refreshChips(); persistFormGenes(); return true; }
       if (side && db.calc[side].length) { db.calc[side].pop(); save(); calcRefresh(); return true; }
     }
@@ -3253,7 +3297,7 @@ var qrcode = function() {
     ['pairs', 'זיווגים', '<circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/>'],
     ['genetics', 'גנטיקה', '<path d="M8 3c0 5 8 5 8 9s-8 4-8 9"/><path d="M16 3c0 5-8 5-8 9s8 4 8 9"/><path d="M9 7h6M8.5 12h7M9 17h6"/>'],
     ['diary', 'יומן', '<rect x="4" y="5" width="16" height="16" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/>'],
-    ['profile', 'פרופיל', '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>']
+    ['profile', 'עסק', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/>']
   ];
   function renderNav() {
     document.getElementById('nav').innerHTML = NAV.map(function (n) {
@@ -3312,7 +3356,8 @@ var qrcode = function() {
   }
 
   function profileView() {
-    var h = head('פרופיל', cloud.fb ? 'החשבון שלך' : '', '');
+    var h = head('עסק', 'הכנסות, הוצאות, לקוחות והחשבון שלך', '');
+    h += businessHtml() + waitlistHtml();
     h += '<div class="section"><div class="section-head"><h2 class="section-title">תזכורות</h2></div>' +
       '<label class="tgl"><input type="checkbox" id="remindTgl"' + (db.remindFeed !== false ? ' checked' : '') + '> תזכורת יום לפני האכלה (במסך הבית)</label>' +
       '<p class="hint" style="margin:8px 0 10px">כדי לקבל התראה גם כשהאפליקציה סגורה, אפשר לייצא את מועדי ההאכלה ליומן הטלפון. ביומן תופיע התראה יום לפני כל האכלה.</p>' +
@@ -3720,6 +3765,7 @@ var qrcode = function() {
     if (mn.length) h += '<p class="morph" style="margin-top:8px">= ' + esc(mn.join(', ')) + '</p>';
     h += warnHtml(s.genes);
     h += alertsBox(snakeAlerts(s));
+    h += waitingForHtml(s);
     var la = lastAte(s);
     h += '<div class="spec">' + spec('תאריך בקיעה', s.hatch ? fmtDate(s.hatch) : '') + spec('משקל', s.weight ? s.weight + ' גרם' : '') + spec('מיקום', s.location) + spec('האכלה כל', s.feedEvery ? s.feedEvery + ' ימים' : '') +
       spec('אכל לאחרונה', la ? fmtDate(la.date) + ' (' + rel(daysSince(la.date)) + ')' + (preyText(la) ? ' · ' + preyText(la) : '') : '') +
@@ -3829,6 +3875,9 @@ var qrcode = function() {
     else if (ui.sheet.type === 'health') { if (!s) return closeSheet(); sh.innerHTML = healthFormHtml(s); }
     else if (ui.sheet.type === 'event') sh.innerHTML = eventFormHtml();
     else if (ui.sheet.type === 'pair') sh.innerHTML = pairFormHtml();
+    else if (ui.sheet.type === 'goal') sh.innerHTML = goalSheetHtml();
+    else if (ui.sheet.type === 'expense') sh.innerHTML = expenseFormHtml();
+    else if (ui.sheet.type === 'wait') sh.innerHTML = waitFormHtml();
     else if (ui.sheet.type === 'label') sh.innerHTML = labelSheetHtml();
     else if (ui.sheet.type === 'pairlabel') { if (!pairOf(ui.sheet.pid)) return closeSheet(); sh.innerHTML = pairLabelSheetHtml(); }
     else if (ui.sheet.type === 'share') { if (!s) return closeSheet(); sh.innerHTML = shareHtml(s); }
@@ -3956,6 +4005,67 @@ var qrcode = function() {
       '<span class="pair-genes">' + (g.length ? g.map(function (x) { return '<span class="gchip">' + esc(x) + '</span>'; }).join('') : '<span class="gchip normal">Normal</span>') + '</span>' +
       (mn.length ? '<span class="morph">= ' + esc(mn.join(', ')) + '</span>' : '') + '</span>';
   }
+  /* ---------- incubation: day count, egg counts and temperature / humidity log ---------- */
+  // ball python eggs do best at about 31–32.5°C with 90–100% humidity
+  var INC_T = [31, 32.5], INC_H = 90;
+  function incDays(p) { return Number(p.incubation) > 0 ? Number(p.incubation) : 58; }
+  function incDay(p) { return p.laid && !p.hatched && !p.failed ? Math.max(0, daysSince(p.laid)) : 0; } // the laying day is day 0
+  function eggsLine(p) {
+    var parts = [];
+    if (p.eggs !== '' && p.eggs != null) parts.push(p.eggs + ' ביצים');
+    if (p.good !== '' && p.good != null) parts.push(p.good + ' תקינות');
+    if (p.slugs !== '' && p.slugs != null && Number(p.slugs) > 0) parts.push(p.slugs + ' סלאגים');
+    if (p.hatchedN !== '' && p.hatchedN != null) parts.push(p.hatchedN + ' בקעו');
+    return parts.join(' · ');
+  }
+  function readingWarn(r) {
+    var w = [];
+    if (r.t !== '' && r.t != null && (r.t < INC_T[0] || r.t > INC_T[1])) w.push(r.t < INC_T[0] ? 'קר מדי' : 'חם מדי');
+    if (r.h !== '' && r.h != null && r.h < INC_H) w.push('לחות נמוכה');
+    return w.join(', ');
+  }
+  function incubationHtml(p) {
+    if (!p.laid || p.failed) return '';
+    var log = (p.incLog || []).slice().sort(function (a, b) { return a.date === b.date ? (b.id > a.id ? 1 : -1) : (b.date > a.date ? 1 : -1); });
+    var h = '<div class="section"><h3 class="section-title" style="margin-bottom:8px">מעקב דגירה</h3>';
+    if (!p.hatched) {
+      var d = incDay(p), n = incDays(p), pct = Math.max(0, Math.min(100, d / n * 100));
+      h += '<div class="panel"><div class="r1" style="display:flex;justify-content:space-between;align-items:baseline"><b>יום ' + d + ' מתוך ' + n + '</b><span class="note">' + (d <= n ? 'עוד ' + (n - d) + ' ימים' : 'עבר ' + (d - n) + ' ימים מהצפי') + '</span></div>' +
+        '<div class="incbar"><i style="width:' + pct + '%"></i></div>' +
+        '<p class="note" style="margin-top:8px">הבקיעה מתחילה בדרך כלל בין יום ' + (n - 5) + ' ליום ' + (n + 2) + '. מומלץ ' + INC_T[0] + '–' + INC_T[1] + '°C ולחות ' + INC_H + '%–100%.</p></div>';
+    }
+    h += '<form id="incForm" data-pid="' + p.id + '" class="incform"><label class="field">טמפרטורה (מעלות)<input type="number" name="t" step="0.1" min="20" max="40" inputmode="decimal"></label>' +
+      '<label class="field">לחות (%)<input type="number" name="h" min="0" max="100" inputmode="numeric"></label>' +
+      '<label class="field">הערה<input type="text" name="note" maxlength="80" placeholder="לא חובה"></label><button class="btn btn-soft" type="submit">+ מדידה</button></form>';
+    h += log.length ? log.slice(0, 8).map(function (r) {
+      var w = readingWarn(r);
+      return '<div class="logrow"><div>' + fmtDate(r.date) + ' · ' + [r.t !== '' && r.t != null ? r.t + '°C' : '', r.h !== '' && r.h != null ? r.h + '%' : ''].filter(Boolean).join(' · ') +
+        (w ? ' <span class="fres refused">' + w + '</span>' : '') + (r.note ? '<small>' + esc(r.note) + '</small>' : '') + '</div>' +
+        '<button class="icon-btn" type="button" data-act="delreading" data-id="' + p.id + '" data-rid="' + r.id + '" aria-label="מחיקת מדידה">✕</button></div>';
+    }).join('') : '<p class="note">עוד אין מדידות.</p>';
+    return h + '</div>';
+  }
+  function addReading(f) {
+    var p = pairOf(f.dataset.pid); if (!p) return;
+    var fd = new FormData(f), t = num(fd.get('t')), hm = num(fd.get('h')), note = String(fd.get('note') || '').trim();
+    if (t === '' && hm === '' && !note) return toast('כתבו טמפרטורה, לחות או הערה');
+    var r = { id: uid(), date: todayISO(), t: t, h: hm, note: note };
+    p.incLog = (p.incLog || []).concat(r);
+    if (!save()) return;
+    renderSheet(); renderPage();
+    var w = readingWarn(r); toast(w ? 'נשמר. שימו לב: ' + w : 'המדידה נשמרה');
+  }
+  function breedingStatsHtml() {
+    var ps = db.pairs.filter(function (p) { return p.laid; });
+    if (!ps.length) return '';
+    var eggs = 0, good = 0, hatched = 0, haveGood = 0, haveHatch = 0;
+    ps.forEach(function (p) {
+      if (Number(p.eggs) > 0) { eggs += Number(p.eggs); if (p.good !== '' && p.good != null) { good += Number(p.good); haveGood += Number(p.eggs); } if (p.hatchedN !== '' && p.hatchedN != null) { hatched += Number(p.hatchedN); haveHatch += Number(p.good !== '' && p.good != null ? p.good : p.eggs); } }
+    });
+    return '<div class="stats" style="margin-bottom:16px"><div class="stat"><b>' + ps.length + '</b><span>הטלות</span></div>' +
+      '<div class="stat"><b>' + (haveGood ? Math.round(good / haveGood * 100) + '%' : '—') + '</b><span>ביצים תקינות</span></div>' +
+      '<div class="stat"><b>' + (haveHatch ? Math.round(hatched / haveHatch * 100) + '%' : '—') + '</b><span>אחוז בקיעה</span></div></div>';
+  }
   function pairCardHtml(p) {
     var st = pairStage(p), eh = expectedHatch(p), left = eh ? -daysSince(eh) : 0;
     return '<button type="button" class="pair-card" data-act="openpair" data-id="' + p.id + '">' +
@@ -3963,17 +4073,135 @@ var qrcode = function() {
       '<span class="pair-sides">' + pairSideHtml(snakeById(p.maleId), 'male') + '<span class="pair-x">×</span>' + pairSideHtml(snakeById(p.femaleId), 'female') + '</span>' +
       '<span class="progress">' + PAIR_STEPS.map(function (_, i) { return '<span class="' + (st.i >= i ? 'on' : '') + '"></span>'; }).join('') + '</span>' +
       '<span class="stage ' + st.css + '">' + esc(st.label + (st.date ? ' · ' + fmtDate(st.date) : '')) + '</span>' +
-      (eh ? '<span class="note">צפי בקיעה: ' + fmtDate(eh) + (left >= 0 ? ' · בעוד ' + left + ' ימים' : ' · עבר לפני ' + (-left) + ' ימים') + '</span>' : '') +
-      (p.eggs ? '<span class="note">' + esc(p.eggs) + ' ביצים</span>' : '') + '</button>';
+      (eh ? '<span class="note">יום ' + incDay(p) + ' מתוך ' + incDays(p) + ' · צפי בקיעה: ' + fmtDate(eh) + (left >= 0 ? ' · בעוד ' + left + ' ימים' : ' · עבר לפני ' + (-left) + ' ימים') + '</span>' +
+        '<span class="incbar"><i style="width:' + Math.max(0, Math.min(100, incDay(p) / incDays(p) * 100)) + '%"></i></span>' : '') +
+      (eggsLine(p) ? '<span class="note">' + esc(eggsLine(p)) + '</span>' : '') + '</button>';
   }
   function pairsView() {
     var h = head('זיווגים', db.pairs.length ? db.pairs.length + ' זיווגים' : 'זיווגים והטלות', '<button class="btn btn-primary" type="button" data-act="addpair">+ זיווג</button>');
+    h += goalsHtml();
     if (!db.pairs.length) return h + '<div class="empty"><h3>אין זיווגים עדיין</h3><p>רשמו נעילה, ביוץ והטלה, וקבלו צפי בקיעה ביומן. בבקיעה אפשר ליצור כרטיסי צאצאים בלחיצה אחת.</p></div>';
     var list = db.pairs.slice().sort(function (a, b) { return String(b.createdAt || '').localeCompare(String(a.createdAt || '')); });
-    return h + '<div class="list">' + list.map(pairCardHtml).join('') + '</div>';
+    return h + '<div class="section"><div class="section-head"><h2 class="section-title">זיווגים והטלות</h2></div>' + breedingStatsHtml() + '<div class="list">' + list.map(pairCardHtml).join('') + '</div></div>';
+  }
+
+  /* ---------- projects: a target morph, and which pairings in the collection get closest to it ---------- */
+  // well-known morph names that are several genes (the goal needs all of them visual)
+  var GOAL_EXPAND = {
+    'batman': ['Leopard', 'Spotnose', 'Clown'], 'bumblebee': ['Pastel', 'Spider'], 'bumble bee': ['Pastel', 'Spider'], 'killer bee': ['Super Pastel', 'Spider'],
+    'pewter': ['Pastel', 'Cinnamon'], 'firefly': ['Pastel', 'Fire'], 'lemon blast': ['Pastel', 'Pinstripe'], 'spinner': ['Spider', 'Pinstripe'], 'pastave': ['Pastel', 'Mojave'],
+    'highway': ['Gravel', 'Yellow Belly'], 'super stripe': ['Specter', 'Yellow Belly'], 'freeway': ['Asphalt', 'Yellow Belly'], 'puma': ['Spark', 'Yellow Belly'],
+    'ivory': ['Super Yellow Belly'], 'crypton': ['Het Clown', 'Het Cryptic'], 'purple passion': ['Phantom', 'Mojave'], 'mystic potion': ['Mystic', 'Mojave'], 'candy albino': ['Albino', 'Candy']
+  };
+  function locusKey(name) { var cx = complexOf(name); return cx ? 'cx:' + cx.id : 'g:' + canon(name).toLowerCase(); }
+  // what one parent passes at one locus: { allele: chance }, the rest is the normal allele
+  function gametes(entries) {
+    var d = {}, rem = 2;
+    entries.forEach(function (x) { var cc = Math.min(x.c, rem); rem -= cc; if (cc > 0) d[x.a] = (d[x.a] || 0) + (cc / 2) * (x.p == null ? 1 : x.p); });
+    return d;
+  }
+  function parentLoci(s) {
+    var L = {};
+    snakeCalcGenes(s).forEach(function (e) { var k = locusKey(e.name); (L[k] = L[k] || []).push({ a: canon(e.name), c: e.c, p: e.p }); });
+    return L;
+  }
+  // target parts: [{ a, need: 'vis1' (at least one copy, co-dom/dom) | 'vis2' (two copies) | 'het' (one copy, recessive) }], grouped by locus
+  function goalParts(goal) {
+    var byL = {};
+    (goal.genes || []).forEach(function (g) {
+      var x = parseGene(g), a = canon(x.name), mode = geneMode(a), need;
+      if (mode === 'recessive') need = x.copies >= 2 ? 'vis2' : 'het';
+      else need = x.copies >= 2 ? 'vis2' : 'vis1';
+      (byL[locusKey(a)] = byL[locusKey(a)] || []).push({ a: a, need: need });
+    });
+    return byL;
+  }
+  function goalChance(goal, m, f) {
+    var byL = goalParts(goal), Lm = parentLoci(m), Lf = parentLoci(f), pVis = 1, pCarry = 1;
+    Object.keys(byL).forEach(function (k) {
+      var parts = byL[k], gm = gametes(Lm[k] || []), gf = gametes(Lf[k] || []), v, c;
+      function P(d, a) { return d[a] || 0; }
+      if (parts.length >= 2) { // two different alleles of one complex, e.g. Highway, Crypton
+        var a = parts[0].a, b = parts[1].a;
+        v = P(gm, a) * P(gf, b) + P(gm, b) * P(gf, a);
+        c = (1 - (1 - P(gm, a)) * (1 - P(gf, a))) * (1 - (1 - P(gm, b)) * (1 - P(gf, b)));
+      } else {
+        var t = parts[0], pm = P(gm, t.a), pf = P(gf, t.a), one = 1 - (1 - pm) * (1 - pf);
+        // co-dom / dominant: at least one copy; Super or recessive visual: both copies; Het: exactly one copy
+        v = t.need === 'vis1' ? one : t.need === 'vis2' ? pm * pf : pm * (1 - pf) + pf * (1 - pm);
+        c = one;
+      }
+      pVis *= v; pCarry *= c;
+    });
+    return { vis: pVis, carry: pCarry };
+  }
+  function goalRanking(goal) {
+    var males = db.snakes.filter(function (s) { return s.sex === 'male' && s.status !== 'sold'; });
+    var females = db.snakes.filter(function (s) { return s.sex === 'female' && s.status !== 'sold'; });
+    var out = [];
+    males.forEach(function (m) { females.forEach(function (f) { var r = goalChance(goal, m, f); if (r.carry > 0) out.push({ m: m, f: f, vis: r.vis, carry: r.carry }); }); });
+    return out.sort(function (a, b) { return (b.vis - a.vis) || (b.carry - a.carry); });
+  }
+  function pctTxt(x) { return (x * 100 >= 10 ? Math.round(x * 100) : Math.round(x * 1000) / 10) + '%'; }
+  function goalSummary(goal) {
+    var r = goalRanking(goal), best = r[0];
+    if (!best) return { r: r, html: '<span class="note">אין באוסף זכר ונקבה שנושאים אף אחד מהגנים של היעד.</span>' };
+    if (best.vis > 0) return { r: r, html: '<span class="note">הכי טוב: <b>' + esc(sname(best.m)) + ' × ' + esc(sname(best.f)) + '</b> · ' + pctTxt(best.vis) + ' בדור הזה</span>' };
+    return { r: r, html: '<span class="note">אין זיווג שנותן את זה בדור אחד. הכי קרוב: <b>' + esc(sname(best.m)) + ' × ' + esc(sname(best.f)) + '</b> · ' + pctTxt(best.carry) + ' מהצאצאים יישאו את כל הגנים</span>' };
+  }
+  function goalsHtml() {
+    var h = '<div class="section" style="margin-top:8px"><div class="section-head"><h2 class="section-title">פרויקטים</h2><button class="linkbtn" type="button" data-act="addgoal">+ פרויקט</button></div>';
+    if (!db.goals.length) return h + '<p class="note">בחרו מורף שאתם רוצים להגיע אליו, למשל Batman, והאפליקציה תמצא אילו זיווגים מהאוסף מקרבים אליו.</p></div>';
+    return h + '<div class="list">' + db.goals.map(function (g) {
+      return '<button type="button" class="pair-card" data-act="opengoal" data-id="' + g.id + '"><span class="pair-top"><b>' + esc(g.name || (g.genes || []).join(' × ')) + '</b></span>' + genesHtml(g.genes, 0) + goalSummary(g).html + '</button>';
+    }).join('') + '</div></div>';
+  }
+  var goalForm = null; // { id, name, genes }
+  function goalChipsHtml() {
+    return (goalForm ? goalForm.genes : []).map(function (n, i) {
+      return (i ? '<span class="gx">×</span>' : '') + '<span class="gchip big"><span class="ctext">' + esc(n) + '</span><button type="button" data-act="delgene" data-side="goal" data-i="' + i + '" aria-label="הסרה">✕</button></span>';
+    }).join('');
+  }
+  function addGoalGene(text) {
+    if (!goalForm) return;
+    var x = parseGene(text), list = GOAL_EXPAND[canon(x.name).toLowerCase()] || [comp(x.name, x.mode, x.copies, 1)];
+    if (!goalForm.name && GOAL_EXPAND[canon(x.name).toLowerCase()]) { goalForm.name = x.name; var ni = document.querySelector('#goalForm input[name="gname"]'); if (ni) ni.value = x.name; }
+    list.forEach(function (g) { var k = canon(parseGene(g).name).toLowerCase(); if (!goalForm.genes.some(function (e) { return canon(parseGene(e).name).toLowerCase() === k; })) goalForm.genes.push(g); });
+    var b = document.getElementById('chips-goal'); if (b) b.innerHTML = goalChipsHtml();
+  }
+  function goalSheetHtml() {
+    var g = ui.sheet.gid ? (db.goals || []).find(function (x) { return x.id === ui.sheet.gid; }) : null;
+    if (!goalForm || goalForm.id !== (g ? g.id : '')) goalForm = { id: g ? g.id : '', name: g ? g.name : '', genes: g ? g.genes.slice() : [] };
+    var h = '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button>' +
+      (g ? '<div class="acts"><button class="icon-btn danger" type="button" data-act="delgoal" data-id="' + g.id + '" aria-label="מחיקה">🗑</button></div>' : '') + '</div>' +
+      '<h2 class="sheet-title">' + (g ? esc(g.name || 'פרויקט') : 'פרויקט חדש') + '</h2>' +
+      '<form id="goalForm" autocomplete="off"><label class="field">שם<input type="text" name="gname" maxlength="40" value="' + esc(goalForm.name) + '" placeholder="למשל Batman"></label>' +
+      '<div class="gfield"><span>הגנטיקה של היעד</span><div class="gpwrap"><div class="gp" data-gp="goal" dir="ltr"><span class="chipsbox" id="chips-goal">' + goalChipsHtml() + '</span>' +
+      '<input type="text" data-gene="goal" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="הקלידו גן או מורף, למשל Batman"></div><div class="gsug" hidden></div></div>' +
+      '<span class="hint">אפשר לכתוב שם של מורף, כמו Batman או Highway, והגנים שלו יתווספו לבד.</span></div>' +
+      '<div class="row"><button class="btn btn-primary" type="submit">שמירה</button><button class="btn btn-ghost" type="button" data-act="close">ביטול</button></div></form>';
+    if (g) {
+      var r = goalRanking(g).slice(0, 8);
+      h += '<div class="section"><h3 class="section-title" style="margin-bottom:8px">הזיווגים הכי טובים מהאוסף</h3>' + (r.length ? r.map(function (x) {
+        return '<div class="goal-row"><div><b>' + esc(sname(x.m)) + ' ♂ × ' + esc(sname(x.f)) + ' ♀</b><small>' + (x.vis > 0 ? pctTxt(x.vis) + ' יוצאים ' + esc(g.name || 'היעד') + ' בדור הזה' : 'עוד לא בדור הזה · ' + pctTxt(x.carry) + ' יישאו את כל הגנים') + '</small></div>' +
+          '<button class="btn btn-soft" type="button" data-act="goalpair" data-m="' + x.m.id + '" data-f="' + x.f.id + '">תכנון זיווג</button></div>';
+      }).join('') : '<p class="note">אין באוסף זכר ונקבה שנושאים את הגנים האלה. אולי צריך לרכוש נחש שנושא אחד מהם.</p>') +
+        '<p class="hint" style="margin-top:8px">החישוב מתבסס על הגנטיקה שרשומה בכרטיסי הנחשים. נחשים שסומנו "נמכר" לא נכללים.</p></div>';
+    }
+    return h;
+  }
+  function saveGoal(f) {
+    var fd = new FormData(f), inp = f.querySelector('input[data-gene]');
+    if (inp && inp.value.trim().length >= 2) { addGoalGene(inp.value); inp.value = ''; }
+    if (!goalForm.genes.length) return toast('הוסיפו לפחות גן אחד ליעד');
+    var data = { name: String(fd.get('gname') || '').trim(), genes: goalForm.genes.slice() };
+    var g = goalForm.id ? db.goals.find(function (x) { return x.id === goalForm.id; }) : null;
+    if (g) Object.assign(g, data); else { g = Object.assign({ id: uid(), createdAt: new Date().toISOString() }, data); db.goals.push(g); }
+    if (!save()) return;
+    goalForm = null; ui.sheet = { type: 'goal', gid: g.id }; renderSheet(); renderPage(); toast('הפרויקט נשמר');
   }
   function pairFormHtml() {
-    var p = ui.sheet.pid ? pairOf(ui.sheet.pid) : null;
+    var p = ui.sheet.pid ? pairOf(ui.sheet.pid) : null, pre = ui.sheet.preset || {};
     function v(k) { return p && p[k] != null ? esc(p[k]) : ''; }
     function opts(sex, sel) {
       return '<option value="">בחרו…</option>' + db.snakes.filter(function (s) { return s.sex === sex; }).map(function (s) {
@@ -3986,15 +4214,19 @@ var qrcode = function() {
       '<h2 class="sheet-title">' + (p ? esc(pairName(p)) : 'זיווג חדש') + '</h2>';
     if (noSex) h += '<div class="warnbox"><p>כדי לתכנן זיווג צריך לפחות זכר אחד ונקבה אחת באוסף (מסמנים בכרטיס תחת "זכר / נקבה").</p></div>';
     h += '<form id="pairForm" data-pid="' + (p ? p.id : '') + '" autocomplete="off">' +
-      '<div class="grid2"><div><label class="field" style="margin-bottom:0">זכר ♂<select name="maleId" required>' + opts('male', p && p.maleId) + '</select></label><div id="pg-maleId">' + pickedGenesHtml(p && snakeById(p.maleId)) + '</div></div>' +
-      '<div><label class="field" style="margin-bottom:0">נקבה ♀<select name="femaleId" required>' + opts('female', p && p.femaleId) + '</select></label><div id="pg-femaleId">' + pickedGenesHtml(p && snakeById(p.femaleId)) + '</div></div></div>' +
+      '<div class="grid2"><div><label class="field" style="margin-bottom:0">זכר ♂<select name="maleId" required>' + opts('male', p ? p.maleId : pre.maleId) + '</select></label><div id="pg-maleId">' + pickedGenesHtml(snakeById(p ? p.maleId : pre.maleId)) + '</div></div>' +
+      '<div><label class="field" style="margin-bottom:0">נקבה ♀<select name="femaleId" required>' + opts('female', p ? p.femaleId : pre.femaleId) + '</select></label><div id="pg-femaleId">' + pickedGenesHtml(snakeById(p ? p.femaleId : pre.femaleId)) + '</div></div></div>' +
       '<div class="grid2"><label class="field">עונה<input type="text" name="season" maxlength="20" value="' + (p ? v('season') : new Date().getFullYear()) + '"></label>' +
       '<label class="field">ימי דגירה<input type="number" name="incubation" min="30" max="120" inputmode="numeric" value="' + (p && p.incubation ? v('incubation') : 58) + '"><span class="hint">בדרך כלל 55–60</span></label></div>' +
       '<p class="group-label">שלבים (תאריך)</p><div class="grid2">' + PAIR_STEPS.map(function (s) {
         return '<label class="field">' + s[1] + '<input type="date" name="' + s[0] + '" value="' + v(s[0]) + '"></label>';
       }).join('') + '<label class="field">מספר ביצים<input type="number" name="eggs" min="0" max="60" inputmode="numeric" value="' + v('eggs') + '"></label></div>' +
+      '<div class="grid3"><label class="field">ביצים תקינות<input type="number" name="good" min="0" max="60" inputmode="numeric" value="' + v('good') + '"></label>' +
+      '<label class="field">סלאגים<input type="number" name="slugs" min="0" max="60" inputmode="numeric" value="' + v('slugs') + '"></label>' +
+      '<label class="field">בקעו<input type="number" name="hatchedN" min="0" max="60" inputmode="numeric" value="' + v('hatchedN') + '"></label></div>' +
       '<label class="field">הערות<textarea name="notes" rows="3" maxlength="500">' + v('notes') + '</textarea></label>' +
       '<div class="row"><button class="btn btn-primary" type="submit">שמירה</button><button class="btn btn-ghost" type="button" data-act="close">ביטול</button></div></form>';
+    if (p) h += incubationHtml(p);
     if (p) {
       var eh = expectedHatch(p);
       h += '<div class="section"><h3 class="section-title" style="margin-bottom:8px">פעולות</h3>' +
@@ -4011,7 +4243,9 @@ var qrcode = function() {
   function savePair(f) {
     var fd = new FormData(f), maleId = String(fd.get('maleId') || ''), femaleId = String(fd.get('femaleId') || '');
     if (!maleId || !femaleId) return toast('בחרו זכר ונקבה');
-    var data = { maleId: maleId, femaleId: femaleId, season: String(fd.get('season') || '').trim(), incubation: num(fd.get('incubation')) || 58, eggs: num(fd.get('eggs')), notes: String(fd.get('notes') || '').trim() };
+    var data = { maleId: maleId, femaleId: femaleId, season: String(fd.get('season') || '').trim(), incubation: num(fd.get('incubation')) || 58, eggs: num(fd.get('eggs')),
+      good: num(fd.get('good')), slugs: num(fd.get('slugs')), hatchedN: num(fd.get('hatchedN')), notes: String(fd.get('notes') || '').trim() };
+    if (data.eggs !== '' && ((data.good !== '' && data.good > data.eggs) || (data.slugs !== '' && data.slugs > data.eggs))) return toast('מספר התקינות או הסלאגים גדול ממספר הביצים');
     PAIR_STEPS.forEach(function (s) { data[s[0]] = String(fd.get(s[0]) || ''); });
     var ex = f.dataset.pid ? pairOf(f.dataset.pid) : null;
     if (ex) Object.assign(ex, data); else { data.id = uid(); data.createdAt = new Date().toISOString(); db.pairs.push(data); }
@@ -4250,6 +4484,132 @@ var qrcode = function() {
       (forsale ? '<p class="note" style="margin-top:8px">שווי הנחשים שמוצעים למכירה: ' + forsale.toLocaleString('he-IL') + ' ₪</p>' : '') +
       (breedVal ? '<p class="note" style="margin-top:6px">שווי נחשי הרבייה: ' + breedVal.toLocaleString('he-IL') + ' ₪</p>' : '') + '</div>';
   }
+  /* ---------- business: income, expenses and profit per year, and the customer waiting list ---------- */
+  var EXP_CATS = [['food', 'מזון (עכברים וחולדות)'], ['gear', 'ציוד וטרריומים'], ['power', 'חשמל וחימום'], ['vet', 'וטרינר ותרופות'], ['bedding', 'מצע וניקיון'], ['shows', 'תערוכות ומשלוחים'], ['other', 'אחר']];
+  function yearOf(iso) { return iso ? String(iso).slice(0, 4) : ''; }
+  function money(n) { return Math.round(Number(n) || 0).toLocaleString('he-IL') + ' ₪'; }
+  function businessYears() {
+    var ys = {}; ys[String(new Date().getFullYear())] = 1;
+    db.snakes.forEach(function (s) { if (s.status === 'sold' && s.soldDate) ys[yearOf(s.soldDate)] = 1; if (Number(s.buyPrice) > 0 && s.createdAt) ys[yearOf(s.createdAt)] = 1; });
+    db.expenses.forEach(function (x) { if (x.date) ys[yearOf(x.date)] = 1; });
+    return Object.keys(ys).filter(Boolean).sort().reverse();
+  }
+  function businessFigures(y) {
+    var sales = db.snakes.filter(function (s) { return s.status === 'sold' && Number(s.salePrice) > 0 && yearOf(s.soldDate) === y; });
+    var buys = db.snakes.filter(function (s) { return Number(s.buyPrice) > 0 && yearOf(s.createdAt) === y; });
+    var exps = db.expenses.filter(function (x) { return yearOf(x.date) === y; });
+    var income = sales.reduce(function (n, s) { return n + Number(s.salePrice); }, 0);
+    var byCat = {};
+    exps.forEach(function (x) { byCat[x.cat] = (byCat[x.cat] || 0) + (Number(x.amount) || 0); });
+    var buyTotal = buys.reduce(function (n, s) { return n + Number(s.buyPrice); }, 0);
+    if (buyTotal) byCat.snakes = buyTotal;
+    var spent = Object.keys(byCat).reduce(function (n, k) { return n + byCat[k]; }, 0);
+    var undated = db.snakes.filter(function (s) { return s.status === 'sold' && Number(s.salePrice) > 0 && !s.soldDate; }).length;
+    return { sales: sales, exps: exps, income: income, spent: spent, byCat: byCat, undated: undated };
+  }
+  function catLabel(k) { return k === 'snakes' ? 'רכישת נחשים' : (EXP_CATS.find(function (c) { return c[0] === k; }) || [0, 'אחר'])[1]; }
+  function businessHtml() {
+    var years = businessYears(); if (years.indexOf(ui.bizYear) < 0) ui.bizYear = years[0];
+    var y = ui.bizYear, f = businessFigures(y), profit = f.income - f.spent;
+    var h = '<div class="section"><div class="section-head"><h2 class="section-title">הכנסות והוצאות</h2><button class="linkbtn" type="button" data-act="addexpense">+ הוצאה</button></div>';
+    if (years.length > 1) h += '<div class="chips" style="margin-top:0">' + years.map(function (yy) { return '<button class="chip' + (yy === y ? ' on' : '') + '" type="button" data-act="bizyear" data-v="' + yy + '">' + yy + '</button>'; }).join('') + '</div>';
+    h += '<div class="stats"><div class="stat"><b style="font-size:1.35rem">' + money(f.income) + '</b><span>הכנסות</span></div><div class="stat"><b style="font-size:1.35rem">' + money(f.spent) + '</b><span>הוצאות</span></div>' +
+      '<div class="stat' + (profit < 0 ? ' warn' : '') + '"><b style="font-size:1.35rem">' + money(profit) + '</b><span>' + (profit < 0 ? 'הפסד' : 'רווח') + '</span></div></div>';
+    var cats = Object.keys(f.byCat).sort(function (a, b) { return f.byCat[b] - f.byCat[a]; });
+    if (cats.length) h += '<div class="panel" style="margin-top:12px">' + cats.map(function (k) {
+      return '<div class="catrow"><div class="r1"><span>' + esc(catLabel(k)) + '</span><b>' + money(f.byCat[k]) + '</b></div><div class="bar" style="width:' + Math.max(2, f.byCat[k] / f.spent * 100) + '%"></div></div>';
+    }).join('') + '</div>';
+    if (f.undated) h += '<p class="note" style="margin-top:8px">' + f.undated + ' נחשים שנמכרו בלי תאריך מכירה לא נספרים. אפשר להוסיף תאריך בכרטיס הנחש.</p>';
+    var list = f.exps.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+    h += list.length ? '<div style="margin-top:12px">' + list.slice(0, 30).map(function (x) {
+      return '<button type="button" class="logrow" data-act="editexpense" data-id="' + x.id + '" style="width:100%;background:none;border:none;border-bottom:1px solid var(--line);text-align:start;color:inherit"><div>' + fmtDate(x.date) + ' · ' + esc(catLabel(x.cat)) + (x.note ? '<small dir="auto">' + esc(x.note) + '</small>' : '') + '</div><b>' + money(x.amount) + '</b></button>';
+    }).join('') + '</div>' : '<p class="note" style="margin-top:10px">עוד לא נרשמו הוצאות ב־' + y + '. מכירות ורכישות של נחשים נספרות לבד מהכרטיסים.</p>';
+    return h + '</div>';
+  }
+  function expenseFormHtml() {
+    var x = ui.sheet.xid ? db.expenses.find(function (e) { return e.id === ui.sheet.xid; }) : null;
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button>' +
+      (x ? '<div class="acts"><button class="icon-btn danger" type="button" data-act="delexpense" data-id="' + x.id + '" aria-label="מחיקה">🗑</button></div>' : '') + '</div>' +
+      '<h2 class="sheet-title">' + (x ? 'עריכת הוצאה' : 'הוצאה חדשה') + '</h2>' +
+      '<form id="expenseForm" data-xid="' + (x ? x.id : '') + '" autocomplete="off">' +
+      '<div class="grid2"><label class="field">סכום (₪)<input type="number" name="amount" min="0" step="0.01" inputmode="decimal" required value="' + (x ? esc(x.amount) : '') + '"></label>' +
+      '<label class="field">תאריך<input type="date" name="date" required value="' + (x ? x.date : todayISO()) + '"></label></div>' +
+      '<label class="field">קטגוריה<select name="cat">' + optionsHtml(EXP_CATS, x ? x.cat : 'food') + '</select></label>' +
+      '<label class="field">פירוט<input type="text" name="note" maxlength="120" value="' + (x ? esc(x.note || '') : '') + '" placeholder="למשל 50 עכברים מופשרים"></label>' +
+      '<p class="hint" style="margin:-6px 0 14px">רכישות ומכירות של נחשים לא צריך לרשום כאן: הן נספרות לבד ממחיר הרכישה ומחיר המכירה בכרטיס הנחש.</p>' +
+      '<div class="row"><button class="btn btn-primary" type="submit">שמירה</button><button class="btn btn-ghost" type="button" data-act="close">ביטול</button></div></form>';
+  }
+  function saveExpense(f) {
+    var fd = new FormData(f), amount = num(fd.get('amount')), date = String(fd.get('date') || '');
+    if (!(amount > 0)) return toast('כתבו סכום');
+    if (!date) return toast('צריך תאריך');
+    var data = { amount: amount, date: date, cat: String(fd.get('cat') || 'other'), note: String(fd.get('note') || '').trim() };
+    var x = f.dataset.xid ? db.expenses.find(function (e) { return e.id === f.dataset.xid; }) : null;
+    if (x) Object.assign(x, data); else db.expenses.push(Object.assign({ id: uid() }, data));
+    if (!save()) return;
+    ui.bizYear = yearOf(date); closeSheet(); renderPage(); toast(x ? 'ההוצאה עודכנה' : 'ההוצאה נשמרה');
+  }
+  // a waiting-list request matches a snake that is for sale (or not assigned yet) and carries every wanted gene in the wanted form
+  function wantedParts(w) { return String(w.want || '').split(/[,،\n]+|\s[×x]\s/i).map(function (t) { return t.trim(); }).filter(Boolean).map(parseGene); }
+  function waitMatches(w) {
+    var want = wantedParts(w);
+    if (!want.length || w.done) return [];
+    return db.snakes.filter(function (s) {
+      if (!(s.status === 'forsale' || !s.status)) return false;
+      if (w.sex && s.sex !== w.sex) return false;
+      if (Number(w.maxPrice) > 0 && Number(s.salePrice) > Number(w.maxPrice)) return false;
+      var have = {}; (s.genes || []).forEach(function (g) { var x = parseGene(g); have[canon(x.name).toLowerCase()] = x; });
+      return want.every(function (x) {
+        var h = have[canon(x.name).toLowerCase()]; if (!h) return false;
+        if (x.mode === 'recessive') return x.copies >= 2 ? h.copies >= 2 : h.copies >= 1;
+        return x.copies >= 2 ? h.copies >= 2 : true;
+      });
+    });
+  }
+  function waitlistHtml() {
+    var list = db.waitlist.slice().sort(function (a, b) { return (a.done ? 1 : 0) - (b.done ? 1 : 0) || String(a.date || '').localeCompare(String(b.date || '')); });
+    var h = '<div class="section"><div class="section-head"><h2 class="section-title">רשימת המתנה</h2><button class="linkbtn" type="button" data-act="addwait">+ לקוח</button></div>';
+    if (!list.length) return h + '<p class="note">רשמו לקוחות שמחכים למורף מסוים. כשיהיה באוסף נחש שמתאים להם, תראו את זה כאן.</p></div>';
+    return h + '<div class="list">' + list.map(function (w) {
+      var m = waitMatches(w);
+      return '<button type="button" class="pair-card' + (w.done ? ' wdone' : '') + '" data-act="editwait" data-id="' + w.id + '"><span class="pair-top"><b>' + esc(w.name) + '</b><span class="note">' + (w.done ? 'טופל' : w.date ? fmtDate(w.date) : '') + '</span></span>' +
+        '<span class="morph" style="color:var(--text)">' + esc(w.want) + (w.sex ? ' · ' + (w.sex === 'male' ? 'זכר' : 'נקבה') : '') + (Number(w.maxPrice) > 0 ? ' · עד ' + money(w.maxPrice) : '') + '</span>' +
+        (w.contact ? '<span class="note" dir="ltr" style="text-align:end">' + esc(w.contact) + '</span>' : '') +
+        (m.length ? '<span class="stage done">✓ ' + (m.length === 1 ? 'יש נחש מתאים: ' : 'יש ' + m.length + ' נחשים מתאימים: ') + esc(m.slice(0, 3).map(sname).join(', ')) + '</span>' : '') + '</button>';
+    }).join('') + '</div></div>';
+  }
+  function waitFormHtml() {
+    var w = ui.sheet.wid ? db.waitlist.find(function (x) { return x.id === ui.sheet.wid; }) : null;
+    function v(k) { return w && w[k] != null ? esc(w[k]) : ''; }
+    var m = w ? waitMatches(w) : [];
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button>' +
+      (w ? '<div class="acts"><button class="icon-btn danger" type="button" data-act="delwait" data-id="' + w.id + '" aria-label="מחיקה">🗑</button></div>' : '') + '</div>' +
+      '<h2 class="sheet-title">' + (w ? esc(w.name) : 'לקוח ברשימת ההמתנה') + '</h2>' +
+      (m.length ? '<div class="remind" style="margin-top:0"><b>נחשים מתאימים באוסף</b>' + m.map(function (s) { return '<div class="logrow"><span>' + esc(snakeLabel(s)) + (Number(s.salePrice) > 0 ? ' · ' + money(s.salePrice) : '') + '</span><button class="linkbtn" type="button" data-act="open" data-id="' + s.id + '">פתיחה</button></div>'; }).join('') + '</div>' : '') +
+      '<form id="waitForm" data-wid="' + (w ? w.id : '') + '" autocomplete="off">' +
+      '<div class="grid2"><label class="field">שם<input type="text" name="name" maxlength="60" required value="' + v('name') + '"></label>' +
+      '<label class="field">טלפון או אינסטגרם<input type="text" name="contact" maxlength="80" dir="ltr" value="' + v('contact') + '"></label></div>' +
+      '<label class="field">מה הוא מחפש<input type="text" name="want" maxlength="120" dir="ltr" required value="' + v('want') + '" placeholder="Clown, Pastel"><span class="hint">גנים מופרדים בפסיק. "Clown" = ויזואל, "Het Clown" = גם הט מתאים, "Super Pastel" = רק סופר.</span></label>' +
+      '<div class="grid2"><label class="field">זכר / נקבה<select name="sex"><option value="">לא משנה</option><option value="male"' + (w && w.sex === 'male' ? ' selected' : '') + '>זכר ♂</option><option value="female"' + (w && w.sex === 'female' ? ' selected' : '') + '>נקבה ♀</option></select></label>' +
+      '<label class="field">מחיר מקסימלי (₪)<input type="number" name="maxPrice" min="0" inputmode="decimal" value="' + v('maxPrice') + '"></label></div>' +
+      '<label class="field">הערות<textarea name="note" rows="2" maxlength="300">' + v('note') + '</textarea></label>' +
+      (w ? '<label class="tgl" style="margin-bottom:14px"><input type="checkbox" name="done"' + (w.done ? ' checked' : '') + '> טופל (הלקוח קנה או ויתר)</label>' : '') +
+      '<div class="row"><button class="btn btn-primary" type="submit">שמירה</button><button class="btn btn-ghost" type="button" data-act="close">ביטול</button></div></form>';
+  }
+  function saveWait(f) {
+    var fd = new FormData(f), name = String(fd.get('name') || '').trim(), want = String(fd.get('want') || '').trim();
+    if (!name || !want) return toast('צריך שם ומה הלקוח מחפש');
+    var data = { name: name, contact: String(fd.get('contact') || '').trim(), want: want, sex: String(fd.get('sex') || ''), maxPrice: num(fd.get('maxPrice')), note: String(fd.get('note') || '').trim(), done: fd.get('done') === 'on' };
+    var w = f.dataset.wid ? db.waitlist.find(function (x) { return x.id === f.dataset.wid; }) : null;
+    if (w) Object.assign(w, data); else db.waitlist.push(Object.assign({ id: uid(), date: todayISO() }, data));
+    if (!save()) return;
+    closeSheet(); renderPage(); toast(w ? 'עודכן' : 'הלקוח נוסף לרשימה');
+  }
+  // on a snake's page: which customers are waiting for exactly this snake
+  function waitingForHtml(s) {
+    var who = db.waitlist.filter(function (w) { return waitMatches(w).some(function (x) { return x.id === s.id; }); });
+    return who.length ? '<div class="remind"><b>מתאים ללקוחות ברשימת ההמתנה</b>' + who.map(function (w) { return '<div class="logrow"><span>' + esc(w.name) + (w.contact ? ' · <span dir="ltr">' + esc(w.contact) + '</span>' : '') + '</span><span class="note">' + esc(w.want) + '</span></div>'; }).join('') + '</div>' : '';
+  }
   function backupReminderHtml() {
     if (window.claude || cloud.fb || !db.snakes.length) return '';
     var t = todayISO(), base = db.lastBackup || db.created || t, days = daysSince(base);
@@ -4440,6 +4800,7 @@ var qrcode = function() {
       case 'delgene':
         var sd = el.dataset.side, ix = Number(el.dataset.i);
         if (sd === 'flt') { ui.geneFilter.splice(ix, 1); refreshFilter(); var fi = document.querySelector('input[data-gene="filter"]'); if (fi) fi.focus(); }
+        else if (sd === 'goal') { if (goalForm) { goalForm.genes.splice(ix, 1); document.getElementById('chips-goal').innerHTML = goalChipsHtml(); } }
         else if (sd === 's') { formGenes().splice(ix, 1); refreshChips(); persistFormGenes(); var gi = document.querySelector('#snakeForm input[data-gene]'); if (gi) gi.focus(); }
         else { db.calc[sideKey(sd)].splice(ix, 1); save(); calcRefresh(); var ci = document.querySelector('input[data-gene="calc' + sd + '"]'); if (ci) ci.focus(); }
         break;
@@ -4459,6 +4820,18 @@ var qrcode = function() {
       case 'toggleselect': ui.select = !ui.select; ui.sel = {}; renderPage(); break;
       case 'tsel': ui.sel[id] = !ui.sel[id]; renderPage(); break;
       case 'selall': filteredSnakes().forEach(function (s) { ui.sel[s.id] = true; }); renderPage(); break;
+      case 'addgoal': goalForm = null; openSheet({ type: 'goal', gid: '' }); break;
+      case 'opengoal': goalForm = null; openSheet({ type: 'goal', gid: id }); break;
+      case 'delgoal': if (confirm('למחוק את הפרויקט?')) { db.goals = db.goals.filter(function (x) { return x.id !== id; }); save(); goalForm = null; closeSheet(); renderPage(); toast('הפרויקט נמחק'); } break;
+      case 'goalpair': openSheet({ type: 'pair', pid: null, preset: { maleId: el.dataset.m, femaleId: el.dataset.f } }); break;
+      case 'delreading': var rp = pairOf(id); if (rp) { rp.incLog = (rp.incLog || []).filter(function (r) { return r.id !== el.dataset.rid; }); save(); renderSheet(); renderPage(); } break;
+      case 'addexpense': openSheet({ type: 'expense', xid: '' }); break;
+      case 'editexpense': openSheet({ type: 'expense', xid: id }); break;
+      case 'delexpense': if (confirm('למחוק את ההוצאה?')) { db.expenses = db.expenses.filter(function (x) { return x.id !== id; }); save(); closeSheet(); renderPage(); toast('ההוצאה נמחקה'); } break;
+      case 'bizyear': ui.bizYear = el.dataset.v; renderPage(); break;
+      case 'addwait': openSheet({ type: 'wait', wid: '' }); break;
+      case 'editwait': openSheet({ type: 'wait', wid: id }); break;
+      case 'delwait': if (confirm('למחוק את הלקוח מהרשימה?')) { db.waitlist = db.waitlist.filter(function (x) { return x.id !== id; }); save(); closeSheet(); renderPage(); toast('נמחק מהרשימה'); } break;
       case 'selfeed': feedSelected('ate'); break;
       case 'selrefused': feedSelected('refused'); break;
       case 'attn': ui.attn = !ui.attn; renderPage(); break;
@@ -4557,6 +4930,10 @@ var qrcode = function() {
       ui.sheet = { type: 'detail', id: f.dataset.id }; renderSheet(); toast(r === 'refused' ? 'הסירוב תועד' : r === 'regurg' ? 'ההקאה תועדה' : 'ההאכלה תועדה');
     }
     else if (f.id === 'healthForm') { e.preventDefault(); saveHealth(f); }
+    else if (f.id === 'incForm') { e.preventDefault(); addReading(f); }
+    else if (f.id === 'goalForm') { e.preventDefault(); saveGoal(f); }
+    else if (f.id === 'expenseForm') { e.preventDefault(); saveExpense(f); }
+    else if (f.id === 'waitForm') { e.preventDefault(); saveWait(f); }
   });
 
   // swipe the month grid sideways to change month (Hebrew/RTL: a swipe to the right brings the next month)
@@ -4591,6 +4968,8 @@ var qrcode = function() {
   renderPage();
   cloudInit();
   if (!cloud.fb) openDeepLink();
+  // keep a copy of the app on the phone, so it also opens with no internet
+  if ('serviceWorker' in navigator && location.protocol === 'https:') { try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {} }
 })();
 </script>
 </body>
