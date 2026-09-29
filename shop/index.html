@@ -15,7 +15,11 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#000000">
-<link rel="icon" href="../icon-192.png">
+<meta property="og:image:alt" content="הלוגו של RIL Ball Pythons">
+<meta property="og:image:type" content="image/jpeg">
+<link rel="icon" type="image/png" sizes="192x192" href="../icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="../icon-512.png">
+<meta name="apple-mobile-web-app-title" content="RIL Ball Pythons">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,10 +45,11 @@
   @media (min-width: 560px) { .grid { grid-template-columns: 1fr 1fr; } }
   .card { background: rgba(14,14,14,.92); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
   .pic { position: relative; width: 100%; aspect-ratio: 4 / 3; background: var(--surface2); border: 0; padding: 0; display: block; }
-  .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pic { overflow: hidden; }
+  .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; } /* every photo fills the same 4:3 frame */
   .pic .more { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: .75rem; padding: 3px 9px; border-radius: 999px; }
   .pic.empty { display: flex; align-items: center; justify-content: center; }
-  .pic.empty img { width: 40%; height: auto; opacity: .35; mix-blend-mode: screen; }
+  .pic.empty img { position: static; width: 40%; height: auto; opacity: .35; mix-blend-mode: screen; }
   .body { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
   .top { display: flex; align-items: center; gap: 8px; font-size: 1.15rem; font-weight: 700; }
   .sex { color: var(--muted); font-weight: 600; }
