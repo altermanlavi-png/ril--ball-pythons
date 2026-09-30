@@ -3173,6 +3173,7 @@ var qrcode = function() {
     if (c === 'auth/too-many-requests') return 'יותר מדי ניסיונות, נסי שוב בעוד כמה דקות';
     if (c === 'auth/network-request-failed') return 'אין חיבור לאינטרנט';
     if (c === 'permission-denied') return 'אין הרשאה, בדקי את כללי האבטחה';
+    if (c === 'auth/admin-restricted-operation') return 'ההרשמה לאפליקציה סגורה. רק משתמשים קיימים יכולים להיכנס';
     if (c === 'auth/popup-blocked') return 'הדפדפן חסם את חלון הכניסה של Google. אפשרו חלונות קופצים ונסו שוב';
     if (c === 'auth/operation-not-allowed') return 'הכניסה עם Google עוד לא הופעלה ב־Firebase';
     if (c === 'auth/unauthorized-domain') return 'הכתובת של האתר עוד לא אושרה ב־Firebase לכניסה עם Google';
