@@ -3094,7 +3094,7 @@ var qrcode = function() {
         '<div style="display:flex;align-items:center;gap:10px;color:#777;font-size:.85rem"><span style="flex:1;height:1px;background:#333"></span>או עם מייל וסיסמה<span style="flex:1;height:1px;background:#333"></span></div>' +
         '<input id="loginMail" type="email" autocomplete="username" placeholder="מייל" dir="ltr" style="padding:13px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:1rem">' +
         '<div style="position:relative;display:flex">' +
-        '<input id="loginPass" type="password" autocomplete="current-password" placeholder="סיסמה (לפחות 6 תווים)" dir="ltr" style="flex:1;min-width:0;padding:13px 13px 13px 52px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:1rem">' +
+        '<input id="loginPass" type="password" autocomplete="current-password" placeholder="סיסמה (לפחות 8 תווים, כולל מספר)" dir="ltr" style="flex:1;min-width:0;padding:13px 13px 13px 52px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:1rem">' +
         '<button id="loginEye" type="button" aria-label="הצגת הסיסמה" aria-pressed="false" style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;background:none;color:#aaa;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0">' + EYE_SVG + '</button></div>' +
         '<div id="loginMsg" style="min-height:1.3em;color:#ff8a8a;font-size:.85rem"></div>' +
         '<button id="loginIn" type="button" style="padding:13px;border-radius:12px;border:0;background:#fff;color:#000;font-weight:700;font-size:1rem">כניסה</button>' +
@@ -3168,7 +3168,7 @@ var qrcode = function() {
     var c = (e && e.code) || '';
     if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found') return 'מייל או סיסמה שגויים';
     if (c === 'auth/email-already-in-use') return 'המייל כבר רשום, לחצי על כניסה';
-    if (c === 'auth/weak-password') return 'הסיסמה חלשה, לפחות 6 תווים';
+    if (c === 'auth/weak-password' || c === 'auth/password-does-not-meet-requirements') return 'הסיסמה צריכה להיות לפחות 8 תווים ולכלול לפחות מספר אחד';
     if (c === 'auth/invalid-email') return 'כתובת המייל אינה תקינה';
     if (c === 'auth/too-many-requests') return 'יותר מדי ניסיונות, נסי שוב בעוד כמה דקות';
     if (c === 'auth/network-request-failed') return 'אין חיבור לאינטרנט';
