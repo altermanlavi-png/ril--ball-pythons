@@ -3421,16 +3421,21 @@ var qrcode = function() {
   // Hebrew names for the most common genes, so "הט קלאון" works the same as "Het Clown"
   var HE_ALIAS = { 'קלאון': 'Clown', 'פסטל': 'Pastel', 'פייבלד': 'Piebald', 'פיבלד': 'Piebald', 'אלבינו': 'Albino', 'ספיידר': 'Spider', 'בננה': 'Banana', 'מוהאבי': 'Mojave', 'מוחאבי': 'Mojave', 'אנצי': 'Enchi', 'פייר': 'Fire', 'ליסר': 'Lesser', 'באטר': 'Butter', 'שמפיין': 'Champagne', 'קינמון': 'Cinnamon', 'פינסטריפ': 'Pinstripe', 'אקסנטיק': 'Axanthic', 'גוסט': 'Ghost', 'היפו': 'Hypo', 'פנטום': 'Phantom', 'וומה': 'Woma', 'ספוטנוז': 'Spotnose', 'אורנג דרים': 'Orange Dream', 'בלאק פסטל': 'Black Pastel', 'לבנדר אלבינו': 'Lavender Albino', 'קריפטיק': 'Cryptic', 'מיסטיק': 'Mystic', 'יילו בלי': 'Yellow Belly', 'ציץ': 'Chocolate' };
   function heKey(s) { return String(s || '').replace(/['"׳’`]/g, '').replace(/\s+/g, ' ').trim(); }
-  // "het clown", "100% het clown", "66% het clown", "poss het clown", "super pastel", "הט קלאון", "סופר פסטל"
+  // "het clown", "100% het clown", "66% het clown", "pos het clown", "pos enchi", "super pastel", "הט קלאון", "סופר פסטל", "פוסיבול אנצי"
+  // "Pos" (possible) = not proven: counted as a 50% chance in the calculator
+  var POS_RE = /^\s*(?:pos(?:s(?:ible)?)?\.?|פוסיבול|פוס)\s+(.*)$/i;
   function splitPrefix(text) {
-    var m = /^\s*(?:(\d{1,3})\s*%\s*)?(?:poss(?:ible)?\.?\s*)?(het|super|הט|סופר)(?:\s+|$)(.*)$/i.exec(String(text));
-    if (!m) return null;
+    var t = String(text), pm = POS_RE.exec(t), pos = !!pm;
+    if (pm) t = pm[1];
+    var m = /^\s*(?:(\d{1,3})\s*%\s*)?(het|super|הט|סופר)(?:\s+|$)(.*)$/i.exec(t);
+    if (!m) return pos ? { kind: 'pos', p: 0.5, rest: t, pos: true } : null;
     var kind = /^(het|הט)$/i.test(m[2]) ? 'het' : 'super', p = 1;
     if (kind === 'het') {
       if (m[1]) { var pc = +m[1]; p = pc === 66 ? 2 / 3 : pc === 33 ? 1 / 3 : pc / 100; }
-      else if (/poss/i.test(text)) p = 0.5;
+      else if (pos) p = 0.5;
     }
-    return { kind: kind, p: Math.min(1, Math.max(0, p)), rest: m[3] };
+    if (kind === 'super') pos = false;
+    return { kind: kind, p: Math.min(1, Math.max(0, p)), rest: m[3], pos: pos && !m[1] };
   }
   function resolveName(s) { var k = heKey(s); return HE_ALIAS[k] || titleCase(s); }
   function takenSet(inp) {
@@ -3459,7 +3464,7 @@ var qrcode = function() {
     names = names.filter(function (x) { var k = x.n.toLowerCase(); if (taken[canon(x.n).toLowerCase()] || seen[k]) return false; seen[k] = 1; return true; });
     if (!names.length) return;
     box.innerHTML = names.map(function (x) {
-      var full = sp ? comp(x.n, geneMode(x.n), sp.kind === 'het' ? 1 : 2, sp.kind === 'het' ? sp.p : 1) : x.n;
+      var full = sp ? comp(x.n, geneMode(x.n), sp.kind === 'super' ? 2 : 1, sp.kind === 'super' ? 1 : sp.p, false, sp.pos) : x.n;
       var shown = (!sp && !heb) ? '<b>' + esc(x.n.slice(0, q.length)) + '</b>' + esc(x.n.slice(q.length)) : esc(full);
       return '<button type="button" class="gsug-item" data-pick="' + esc(full) + '">' + shown + (x.he ? ' <small class="note">' + esc(x.he) + '</small>' : '') + '</button>';
     }).join('');
@@ -3474,8 +3479,8 @@ var qrcode = function() {
     hideSug();
     if (inp.dataset.gene === 'filter') addFilterGene(g.name);
     else if (inp.dataset.gene === 'goal') addGoalGene(text);
-    else if (inp.dataset.gene === 'snake') addFormGene(comp(g.name, g.mode, g.copies, g.p));
-    else addCalcGene(inp.dataset.gene === 'calcm' ? 'male' : 'female', g.name, g.copies, g.p);
+    else if (inp.dataset.gene === 'snake') addFormGene(comp(g.name, g.mode, g.copies, g.p, false, g.pos));
+    else addCalcGene(inp.dataset.gene === 'calcm' ? 'male' : 'female', g.name, g.copies, g.p, g.pos);
     save();
     try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); }
   }
@@ -3760,23 +3765,32 @@ var qrcode = function() {
   function modeOf(name) { var cx = complexOf(name); return cx ? cx.mode : ((db.calc.modes && db.calc.modes[canon(name)]) || geneMode(name)); }
   // copies = how many copies of the gene: recessive 1 = Het, 2 = visual; others 1 = single, 2 = Super.
   // p = certainty that a Het parent really carries the gene (1 = proven, 2/3 = "66% Het", 0.5 = "50% Het")
-  var HET_STATES = [{ c: 2, p: 1 }, { c: 1, p: 1 }, { c: 1, p: 2 / 3 }, { c: 1, p: 0.5 }];
-  function stateIdx(c, p) { p = p == null ? 1 : p; for (var i = 0; i < HET_STATES.length; i++) if (HET_STATES[i].c === c && Math.abs(HET_STATES[i].p - p) < 0.01) return i; return 0; }
-  function comp(name, mode, c, p, alias) {
-    if (mode === 'recessive') return c === 1 ? ((p != null && p < 0.999 ? Math.floor(p * 100 + 1e-9) : 100) + '% Het ' + name) : name;
+  // pos = "Pos" (possible, not proven), counted as p = 0.5
+  var HET_STATES = [{ c: 2, p: 1 }, { c: 1, p: 1 }, { c: 1, p: 2 / 3 }, { c: 1, p: 0.5 }, { c: 1, p: 0.5, pos: true }];
+  function stateIdx(c, p, pos) { p = p == null ? 1 : p; for (var i = 0; i < HET_STATES.length; i++) if (HET_STATES[i].c === c && Math.abs(HET_STATES[i].p - p) < 0.01 && !!HET_STATES[i].pos === !!pos) return i; return 0; }
+  // co-dominant / dominant chips cycle: single → Super → Pos → single (a snake's dominant gene has no Super label: single → Pos → single)
+  function nextCodom(mode, c, pos, noSuper) {
+    if (pos) return { c: 1, p: 1, pos: false };
+    if (c >= 2 || noSuper) return { c: 1, p: 0.5, pos: true };
+    return { c: 2, p: 1, pos: false };
+  }
+  function comp(name, mode, c, p, alias, pos) {
+    if (mode === 'recessive') return c === 1 ? (pos ? 'Pos Het ' + name : (p != null && p < 0.999 ? Math.floor(p * 100 + 1e-9) : 100) + '% Het ' + name) : name;
+    if (pos) return 'Pos ' + name;
     if (mode === 'dominant') return name;
     return c >= 2 ? 'Super ' + name + (alias && SUPER_ALIAS[canon(name)] ? ' (' + SUPER_ALIAS[canon(name)] + ')' : '') : name;
   }
   function parseGene(g) {
-    var sp = splitPrefix(g), name = resolveName(sp ? sp.rest : g), mode = geneMode(name), copies, p = 1;
+    var sp = splitPrefix(g), name = resolveName(sp ? sp.rest : g), mode = geneMode(name), copies, p = 1, pos = !!(sp && sp.pos);
     if (sp && sp.kind === 'super') copies = 2;
-    else if (sp && sp.kind === 'het' && mode === 'recessive') { copies = 1; p = sp.p; }
+    else if (sp && (sp.kind === 'het' || sp.kind === 'pos') && mode === 'recessive') { copies = 1; p = sp.p; }
     else copies = mode === 'recessive' ? 2 : 1;
-    return { name: name, mode: mode, copies: copies, p: p };
+    if (pos && mode !== 'recessive') { copies = 1; p = 0.5; }
+    return { name: name, mode: mode, copies: copies, p: p, pos: pos };
   }
   function chipLabel(side, i) {
     if (side === 's') return formGenes()[i];
-    var e = db.calc[sideKey(side)][i]; return comp(e.name, modeOf(e.name), e.c, e.p);
+    var e = db.calc[sideKey(side)][i]; return comp(e.name, modeOf(e.name), e.c, e.p, false, e.pos);
   }
   function chipsHtml(side) {
     if (side === 'flt') return ui.geneFilter.map(function (n, i) {
@@ -3784,7 +3798,7 @@ var qrcode = function() {
     }).join('');
     var n = side === 's' ? formGenes().length : db.calc[sideKey(side)].length, out = '';
     for (var i = 0; i < n; i++) {
-      out += (i ? '<span class="gx">×</span>' : '') + '<span class="gchip big"><button type="button" class="ctext" data-act="togglechip" data-side="' + side + '" data-i="' + i + '" title="לחיצה מחליפה: ויזואלי / Het / 66% Het / 50% Het / Super">' + esc(chipLabel(side, i)) + '</button><button type="button" data-act="delgene" data-side="' + side + '" data-i="' + i + '" aria-label="הסרה">✕</button></span>';
+      out += (i ? '<span class="gx">×</span>' : '') + '<span class="gchip big"><button type="button" class="ctext" data-act="togglechip" data-side="' + side + '" data-i="' + i + '" title="לחיצה מחליפה: ויזואלי / Het / 66% Het / 50% Het / Pos Het, או רגיל / Super / Pos">' + esc(chipLabel(side, i)) + '</button><button type="button" data-act="delgene" data-side="' + side + '" data-i="' + i + '" aria-label="הסרה">✕</button></span>';
     }
     return out;
   }
@@ -3809,16 +3823,16 @@ var qrcode = function() {
   function toggleChip(side, i) {
     if (side === 's') {
       var g = parseGene(formGenes()[i]), n;
-      if (g.mode === 'recessive') { n = HET_STATES[(stateIdx(g.copies, g.p) + 1) % HET_STATES.length]; formGenes()[i] = comp(g.name, g.mode, n.c, n.p); }
-      else formGenes()[i] = comp(g.name, g.mode, g.copies === 2 ? 1 : 2);
+      n = g.mode === 'recessive' ? HET_STATES[(stateIdx(g.copies, g.p, g.pos) + 1) % HET_STATES.length] : nextCodom(g.mode, g.copies, g.pos, g.mode === 'dominant');
+      formGenes()[i] = comp(g.name, g.mode, n.c, n.p, false, n.pos);
       refreshChips(); persistFormGenes(); return;
     }
     var e = db.calc[sideKey(side)][i]; if (!e) return;
-    if (modeOf(e.name) === 'recessive') { var nx = HET_STATES[(stateIdx(e.c, e.p) + 1) % HET_STATES.length]; e.c = nx.c; e.p = nx.p; }
-    else { e.c = e.c === 2 ? 1 : 2; e.p = 1; }
+    var md = modeOf(e.name), nx = md === 'recessive' ? HET_STATES[(stateIdx(e.c, e.p, e.pos) + 1) % HET_STATES.length] : nextCodom(md, e.c, e.pos);
+    e.c = nx.c; e.p = nx.p; e.pos = !!nx.pos;
     save(); calcRefresh();
   }
-  function addCalcGene(key, name, copies, p) {
+  function addCalcGene(key, name, copies, p, pos) {
     var list = db.calc[key], k = canon(name).toLowerCase(), pair = COMBO_EXPAND[k];
     if (pair) { // e.g. Highway = Gravel + Yellow Belly: two alleles of the same gene
       pair.forEach(function (n) { if (!list.some(function (e) { return canon(e.name).toLowerCase() === n.toLowerCase(); })) list.push({ name: n, c: 1, p: 1 }); });
@@ -3826,7 +3840,7 @@ var qrcode = function() {
     }
     var c = copies || (geneMode(name) === 'recessive' ? 2 : 1), pp = p == null ? 1 : p;
     var ex = list.find(function (e) { return canon(e.name).toLowerCase() === k; });
-    if (ex) { ex.c = c; ex.p = pp; } else list.push({ name: name, c: c, p: pp });
+    if (ex) { ex.c = c; ex.p = pp; ex.pos = !!pos; } else list.push({ name: name, c: c, p: pp, pos: !!pos });
     save(); calcRefresh();
   }
   function calcRefresh() {
@@ -3957,7 +3971,7 @@ var qrcode = function() {
     return '<div class="picked-genes">' + ((s.genes || []).length ? genesHtml(s.genes, 0) : '<p class="note">לנחש הזה אין גנטיקה רשומה</p>') + '</div>';
   }
   function geneticsView() {
-    var hint = '<p class="hint" style="margin-top:8px">הקלידו אות ובחרו מהרשימה. לחיצה על תג מחליפה: בגן רצסיבי ויזואלי ← Het ← 66% Het ← 50% Het, ובשאר הגנים בין רגיל ל-Super.</p>';
+    var hint = '<p class="hint" style="margin-top:8px">הקלידו אות ובחרו מהרשימה. לחיצה על תג מחליפה: בגן רצסיבי ויזואלי ← Het ← 66% Het ← 50% Het ← Pos Het, ובשאר הגנים רגיל ← Super ← Pos. Pos (פוסיבול) = לא מוכח, ומחושב כסיכוי של 50%.</p>';
     var h = head('מחשבון גנטיקה', 'מלאו את הגנטיקה של הזכר והנקבה וראו מה אפשר לקבל');
     h += '<div class="section two"><div class="panel"><h2 class="side-title">זכר ♂</h2>' + genePicker('calcm', 'm') + hint + '</div>' +
       '<div class="panel"><h2 class="side-title">נקבה ♀</h2>' + genePicker('calcf', 'f') + hint + '</div></div>';
@@ -4080,7 +4094,7 @@ var qrcode = function() {
       '<label class="field">ID<input type="text" name="code" maxlength="20" value="' + (s ? v('code') : esc(nextId())) + '"></label>' +
       '<div class="grid2"><label class="field">מין<input type="text" name="species" maxlength="60" value="' + (s ? v('species') : 'Ball Python') + '"></label>' +
       '<label class="field">זכר / נקבה<select name="sex"><option value="">לא ידוע</option><option value="male"' + (s && s.sex === 'male' ? ' selected' : '') + '>זכר ♂</option><option value="female"' + (s && s.sex === 'female' ? ' selected' : '') + '>נקבה ♀</option></select></label></div>' +
-      '<div class="gfield"><span>גנטיקה</span>' + genePicker('snake', 's') + '<span class="hint">הקלידו אות ובחרו מהרשימה. לחיצה על תג מחליפה בין ויזואלי / Het / 66% Het / 50% Het (או Super). השינויים נשמרים מיד.</span><div id="geneWarn">' + warnHtml(form.genes) + '</div></div>' +
+      '<div class="gfield"><span>גנטיקה</span>' + genePicker('snake', 's') + '<span class="hint">הקלידו אות ובחרו מהרשימה. לחיצה על תג מחליפה בין ויזואלי / Het / 66% Het / 50% Het / Pos Het (או Super / Pos). אפשר גם להקליד, למשל Pos Enchi. השינויים נשמרים מיד.</span><div id="geneWarn">' + warnHtml(form.genes) + '</div></div>' +
       '<div class="grid2"><label class="field">תאריך בקיעה<input type="date" name="hatch" value="' + v('hatch') + '" max="' + todayISO() + '"></label>' +
       '<label class="field">משקל (גרם)<input type="number" name="weight" min="0" max="100000" inputmode="decimal" value="' + v('weight') + '"></label></div>' +
       '<div class="grid2"><label class="field">סטטוס<select name="status">' + STATUSES.map(function (o) { return '<option value="' + o[0] + '"' + (s && (s.status || '') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
@@ -4145,7 +4159,7 @@ var qrcode = function() {
   function saveSnake(f) {
     Array.prototype.forEach.call(document.querySelectorAll('#snakeForm input[data-lin]'), function (li) { commitLin(li); });
     var fd = new FormData(f), inp = document.querySelector('#snakeForm input[data-gene]');
-    if (inp && inp.value.trim().length >= 2) { var pg = parseGene(inp.value); rememberGene(pg.name); addFormGene(comp(pg.name, pg.mode, pg.copies, pg.p)); inp.value = ''; }
+    if (inp && inp.value.trim().length >= 2) { var pg = parseGene(inp.value); rememberGene(pg.name); addFormGene(comp(pg.name, pg.mode, pg.copies, pg.p, false, pg.pos)); inp.value = ''; }
     var name = (form.id && snakeById(form.id) ? snakeById(form.id).name : '') || ''; // there is no name field: old names are kept as they were
     var w = num(fd.get('weight')), s = form.id ? snakeById(form.id) : null;
     var fa = form.father || { id: '', text: '' }, mo = form.mother || { id: '', text: '' };
@@ -4529,7 +4543,7 @@ var qrcode = function() {
     (s ? s.genes || [] : []).forEach(function (g) {
       var x = parseGene(g), pair = COMBO_EXPAND[canon(x.name).toLowerCase()];
       if (pair) pair.forEach(function (n) { out.push({ name: n, c: 1, p: 1 }); });
-      else out.push({ name: x.name, c: x.copies, p: x.p });
+      else out.push({ name: x.name, c: x.copies, p: x.p, pos: x.pos });
     });
     return out;
   }
@@ -4546,7 +4560,8 @@ var qrcode = function() {
   ];
   function haveMap(genes) {
     var have = {};
-    (genes || []).forEach(function (g) { var x = parseGene(g); have[canon(x.name).toLowerCase()] = x; });
+    // a Pos (unproven) gene does not count toward morph names or warnings
+    (genes || []).forEach(function (g) { var x = parseGene(g); if (!x.pos) have[canon(x.name).toLowerCase()] = x; });
     return have;
   }
   function morphNames(genes) {
@@ -4817,7 +4832,7 @@ var qrcode = function() {
       if (Number(w.maxPrice) > 0 && Number(s.salePrice) > Number(w.maxPrice)) return false;
       var have = {}; (s.genes || []).forEach(function (g) { var x = parseGene(g); have[canon(x.name).toLowerCase()] = x; });
       return want.every(function (x) {
-        var h = have[canon(x.name).toLowerCase()]; if (!h) return false;
+        var h = have[canon(x.name).toLowerCase()]; if (!h || h.pos) return false;
         if (x.mode === 'recessive') return x.copies >= 2 ? h.copies >= 2 : h.copies >= 1;
         return x.copies >= 2 ? h.copies >= 2 : true;
       });
