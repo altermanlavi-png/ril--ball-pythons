@@ -2831,9 +2831,41 @@ var qrcode = function() {
     return out;
   }
   function localWrite() {
-    try { localStorage.setItem(KEY, JSON.stringify(db)); return true; }
+    if (photosReady) {
+      var m = photoMap(), sig = JSON.stringify(m);
+      if (sig !== photoSig) { photoSig = sig; idbPut('photos', m).catch(function () { photoSig = ''; photosReady = false; localWrite(); }); }
+    }
+    try { localStorage.setItem(KEY, JSON.stringify(photosReady ? stripPhotos(db) : db)); return true; }
     catch (e) { toast('לא ניתן לשמור בדפדפן (האחסון מלא או חסום)'); return false; }
   }
+  /* ---------- photos live in IndexedDB: localStorage holds only about 5MB, and the pictures filled it up ---------- */
+  var photosReady = false, photoSig = '', idbOpen = null;
+  function idb() {
+    if (!idbOpen) idbOpen = new Promise(function (res, rej) {
+      if (!window.indexedDB) return rej(new Error('no indexedDB'));
+      var r = indexedDB.open('ril-photos', 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('kv'); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+    return idbOpen;
+  }
+  function idbGet(k) { return idb().then(function (d) { return new Promise(function (res, rej) { var q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = function () { res(q.result); }; q.onerror = function () { rej(q.error); }; }); }); }
+  function idbPut(k, v) { return idb().then(function (d) { return new Promise(function (res, rej) { var t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = function () { res(); }; t.onerror = function () { rej(t.error); }; t.onabort = function () { rej(t.error); }; }); }); }
+  function photoMap() { var m = {}; db.snakes.forEach(function (s) { if (s.photos && s.photos.length) m[s.id] = s.photos; else if (s.photo) m[s.id] = [s.photo]; }); return m; }
+  function stripPhotos(d) { return Object.assign({}, d, { snakes: d.snakes.map(function (s) { return Object.assign({}, s, { photo: '', photos: [] }); }) }); }
+  // safety copies (before a cloud load or a restore) go to IndexedDB too, so they no longer take localStorage space
+  function keepCopy(name) { idbPut(name, JSON.stringify(db)).catch(function () {}); }
+  // start-up: put each snake's photos back, then save once so localStorage keeps only the text
+  idbGet('photos').then(function (m) {
+    m = m || {};
+    var put = 0;
+    db.snakes.forEach(function (s) { var ph = m[s.id]; if (ph && ph.length && !(s.photos && s.photos.length) && !s.photo) { s.photos = ph.slice(); s.photo = ph[0]; put++; } });
+    photosReady = true;
+    ['-before-cloud', '-before-restore'].forEach(function (sfx) { try { var v = localStorage.getItem(KEY + sfx); if (v) idbPut(sfx, v).then(function () { localStorage.removeItem(KEY + sfx); }).catch(function () {}); } catch (e) {} });
+    localWrite();
+    if (put && !ui.sheet && document.querySelector('#app .head, #app .homehero')) renderPage();
+  }).catch(function () {});
   // Pied and Piebald are the same gene: only Piebald is offered, and older entries are renamed
   function fixPied(list) { return Array.isArray(list) ? list.map(function (g) { if (typeof g === 'string') return g.replace(/\bPied\b/, 'Piebald'); if (g && typeof g.name === 'string') g.name = g.name.replace(/\bPied\b/, 'Piebald'); return g; }) : list; }
   function normDb(d) {
@@ -2942,7 +2974,7 @@ var qrcode = function() {
       pairs: pairs.docs.map(body), events: events.docs.map(body), expenses: expenses.docs.map(body), waitlist: waitlist.docs.map(body),
       remindFeed: m.remindFeed, customGenes: m.customGenes, draftGenes: m.draftGenes, calc: m.calc, labelOpts: m.labelOpts, lastBackup: m.lastBackup, snoozeUntil: m.snoozeUntil, created: m.created, goals: m.goals, lastCloudBackup: m.lastCloudBackup
     };
-    if (db.snakes.length) { try { localStorage.setItem(KEY + '-before-cloud', JSON.stringify(db)); } catch (e) {} } // safety copy of what this device had
+    if (db.snakes.length) keepCopy('-before-cloud'); // safety copy of what this device had
     db = normDb(nd);
     localWrite();
     cloud.last = {};
@@ -3036,7 +3068,7 @@ var qrcode = function() {
     // photos were not in the backup: keep the ones this device has for the same snakes
     var photos = {}; db.snakes.forEach(function (s) { photos[s.id] = { photos: s.photos || [], photo: s.photo || '' }; });
     restored.snakes.forEach(function (s) { if (photos[s.id]) { s.photos = photos[s.id].photos; s.photo = photos[s.id].photo; } });
-    try { localStorage.setItem(KEY + '-before-restore', JSON.stringify(db)); } catch (e) {}
+    keepCopy('-before-restore');
     db = restored; save(); renderPage();
   }
   function cloudBackupHtml() {
