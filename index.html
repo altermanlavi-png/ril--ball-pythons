@@ -298,6 +298,13 @@
   .selbar { flex-wrap: wrap; }
   /* incubation, projects, business */
   .incbar { display: block; height: 6px; border-radius: 9px; background: var(--surface2); overflow: hidden; margin-top: 8px; direction: rtl; }
+  .feedrow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+  .feedrow-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; background: none; border: none; color: inherit; text-align: start; padding: 0; font: inherit; }
+  .feedrow-txt { display: grid; gap: 2px; min-width: 0; }
+  .feedrow-txt small { color: var(--muted); font-size: .8rem; }
+  .feedrow-acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
+  .fwhen { font-size: .76rem; font-weight: 700; margin-inline-start: 4px; }
+  .fwhen.late { color: var(--red); } .fwhen.due { color: var(--amber); } .fwhen.ok { color: var(--muted); font-weight: 500; }
   .incbar i { display: block; height: 100%; background: var(--amber); border-radius: 9px; }
   .incform { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; align-items: end; margin: 14px 0 6px; }
   .incform .field { margin-bottom: 10px; }
@@ -3554,6 +3561,7 @@ var qrcode = function() {
   var NAV = [
     ['home', 'בית', '<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/>'],
     ['collection', 'אוסף', '<path d="M12 3 3 7.5 12 12l9-4.5z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/>'],
+    ['feeding', 'האכלה', '<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 4c-.8 1-.8 2 0 3M12.5 4c-.8 1-.8 2 0 3M16 4c-.8 1-.8 2 0 3"/>'],
     ['pairs', 'זיווגים', '<circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/>'],
     ['genetics', 'גנטיקה', '<path d="M8 3c0 5 8 5 8 9s-8 4-8 9"/><path d="M16 3c0 5-8 5-8 9s8 4 8 9"/><path d="M9 7h6M8.5 12h7M9 17h6"/>'],
     ['diary', 'יומן', '<rect x="4" y="5" width="16" height="16" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/>'],
@@ -4017,12 +4025,60 @@ var qrcode = function() {
       '<label class="tgl"><input type="checkbox" id="detailTgl"' + (db.calc.detail ? ' checked' : '') + '> פירוט גנוטיפ</label></div><div id="results">' + resultsHtml() + '</div></div>';
     return h;
   }
+  /* ---------- feeding tab: what each snake gets, and what to take out of the freezer ---------- */
+  var FEED_RANGES = [['today', 'היום', 0], ['tomorrow', 'עד מחר', 1], ['week', 'השבוע', 6]];
+  function nextFeedISO(s) { var lf = lastFeed(s), every = Number(s.feedEvery) > 0 ? Number(s.feedEvery) : 7; return lf ? addDaysISO(lf.date, every) : todayISO(); }
+  function feedingView() {
+    var R = FEED_RANGES.find(function (x) { return x[0] === ui.feedRange; }) || FEED_RANGES[0], until = addDaysISO(todayISO(), R[2]);
+    var rows = db.snakes.filter(function (s) { return s.status !== 'sold'; }).map(function (s) { return { s: s, next: nextFeedISO(s) }; })
+      .sort(function (a, b) { return a.next < b.next ? -1 : a.next > b.next ? 1 : 0; });
+    var due = rows.filter(function (x) { return x.next <= until; });
+    var h = head('האכלה', due.length ? (due.length === 1 ? 'נחש אחד' : due.length + ' נחשים') + ' להאכלה ' + R[1] : 'אין האכלות ' + R[1]);
+    if (!rows.length) return h + '<div class="empty"><h3>אין נחשים באוסף</h3><p>הוסיפו נחשים, וכאן תראו מה להאכיל כל אחד ומתי.</p></div>';
+    h += '<div class="chips">' + FEED_RANGES.map(function (x) { return '<button class="chip' + (x[0] === R[0] ? ' on' : '') + '" type="button" data-act="feedrange" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    // the freezer list: the snakes due in the chosen range, grouped by the prey each one gets
+    var groups = {}, order = [];
+    due.forEach(function (x) { var k = preyText(x.s.lastPrey || {}); if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(x.s); });
+    order.sort(function (a, b) { return (a ? 0 : 1) - (b ? 0 : 1) || groups[b].length - groups[a].length; });
+    h += '<div class="section"><h2 class="section-title" style="margin-bottom:8px">מה להוציא מהמקפיא</h2>' + (due.length ? '<div class="panel">' + order.map(function (k) {
+      return '<div class="logrow"><div><b>' + groups[k].length + ' × ' + (k ? esc(k) : 'טרף לא נקבע') + '</b><small>' + esc(groups[k].map(sname).join(', ')) + '</small></div></div>';
+    }).join('') + '</div>' : '<p class="note">אין נחשים להאכלה ' + R[1] + '.</p>') + '</div>';
+    h += '<div class="section"><h2 class="section-title" style="margin-bottom:8px">כל נחש</h2><div class="list">' + rows.map(feedRowHtml).join('') + '</div>' +
+      '<p class="hint" style="margin-top:10px">הטרף של כל נחש מתעדכן לבד מההאכלה האחרונה שתועדה. אפשר לשנות אותו בכפתור "טרף".</p></div>';
+    return h;
+  }
+  function feedRowHtml(x) {
+    var s = x.s, d = Math.round((parseISO(x.next) - parseISO(todayISO())) / 864e5), pt = preyText(s.lastPrey || {}), w = Number(s.weight);
+    function days(n) { return n === 1 ? 'יום' : n === 2 ? 'יומיים' : n + ' ימים'; }
+    var when = d < 0 ? 'באיחור של ' + days(-d) : d === 0 ? 'היום' : d === 1 ? 'מחר' : 'בעוד ' + days(d), css = d < 0 ? 'late' : d === 0 ? 'due' : 'ok';
+    var sub = [pt || 'לא נקבע טרף', w > 0 ? 'טרף מתאים: ⁦' + Math.round(w * 0.1) + '–' + Math.round(w * 0.15) + '⁩ גרם' : ''].filter(Boolean).join(' · ');
+    return '<div class="feedrow"><button class="feedrow-main" type="button" data-act="open" data-id="' + s.id + '">' +
+      (s.photo ? '<img class="avatar" src="' + s.photo + '" alt="">' : '<span class="avatar">' + initial(s) + '</span>') +
+      '<span class="feedrow-txt"><b>' + esc(sname(s)) + ' <span class="fwhen ' + css + '">' + when + '</span></b><small>' + esc(sub) + '</small></span></button>' +
+      '<div class="feedrow-acts"><button class="mini" type="button" data-act="preyform" data-id="' + s.id + '">טרף</button><button class="mini" type="button" data-act="quickfeed" data-id="' + s.id + '">✓ האכלתי</button></div></div>';
+  }
+  function preyFormHtml(s) {
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button></div>' +
+      '<h2 class="sheet-title">מה מאכילים — ' + esc(sname(s)) + '</h2>' +
+      '<form id="preyForm" data-id="' + s.id + '" autocomplete="off">' + preyFieldsHtml(s.lastPrey || {}) +
+      '<label class="field">האכלה כל (ימים)<input type="number" name="feedEvery" min="1" max="60" inputmode="numeric" value="' + esc(s.feedEvery || '') + '" placeholder="7"></label>' +
+      '<div class="row"><button class="btn btn-primary" type="submit">שמירה</button><button class="btn btn-ghost" type="button" data-act="close">ביטול</button></div></form>';
+  }
+  function savePrey(f) {
+    var s = snakeById(f.dataset.id); if (!s) return;
+    var fd = new FormData(f);
+    s.lastPrey = { prey: String(fd.get('prey') || ''), size: String(fd.get('size') || ''), state: String(fd.get('state') || ''), preyG: num(fd.get('preyG')) || '' };
+    s.feedEvery = num(fd.get('feedEvery')) || '';
+    if (!save()) return;
+    closeSheet(); renderPage(); toast('הטרף של ' + sname(s) + ' עודכן');
+  }
+
   function renderPage() {
     document.body.classList.toggle('home', ui.tab === 'home');
     document.body.classList.toggle('profile', ui.tab === 'profile');
     var app = document.getElementById('app');
     app.className = 'app' + (ui.tab === 'genetics' ? ' wide' : '');
-    app.innerHTML = ui.tab === 'home' ? homeView() : ui.tab === 'shop' ? shopView() : ui.tab === 'collection' ? collectionView() : ui.tab === 'genetics' ? geneticsView() : ui.tab === 'pairs' ? pairsView() : ui.tab === 'profile' ? profileView() : diaryView();
+    app.innerHTML = ui.tab === 'home' ? homeView() : ui.tab === 'shop' ? shopView() : ui.tab === 'collection' ? collectionView() : ui.tab === 'genetics' ? geneticsView() : ui.tab === 'pairs' ? pairsView() : ui.tab === 'feeding' ? feedingView() : ui.tab === 'profile' ? profileView() : diaryView();
     renderNav();
   }
 
@@ -4159,6 +4215,7 @@ var qrcode = function() {
     if (ui.sheet.type === 'detail') { if (!s) return closeSheet(); sh.innerHTML = detailHtml(s); }
     else if (ui.sheet.type === 'feed') { if (!s) return closeSheet(); sh.innerHTML = feedFormHtml(s); }
     else if (ui.sheet.type === 'health') { if (!s) return closeSheet(); sh.innerHTML = healthFormHtml(s); }
+    else if (ui.sheet.type === 'prey') { if (!s) return closeSheet(); sh.innerHTML = preyFormHtml(s); }
     else if (ui.sheet.type === 'event') sh.innerHTML = eventFormHtml();
     else if (ui.sheet.type === 'pair') sh.innerHTML = pairFormHtml();
     else if (ui.sheet.type === 'goal') sh.innerHTML = goalSheetHtml();
@@ -5224,6 +5281,8 @@ var qrcode = function() {
       case 'sort': ui.sort = el.dataset.v; renderPage(); break;
       case 'status': ui.status = el.dataset.v; renderPage(); break;
       case 'quickfeed': quickFeed(id); break;
+      case 'feedrange': ui.feedRange = el.dataset.v; renderPage(); break;
+      case 'preyform': openSheet({ type: 'prey', id: id }); break;
       case 'feedform': openSheet({ type: 'feed', id: id }); break;
       case 'delfeed': var sn = snakeById(id); if (sn) { sn.feedings = sn.feedings.filter(function (f) { return f.id !== el.dataset.fid; }); save(); renderPage(); renderSheet(); toast('האכלה נמחקה'); } break;
       case 'askdel': ui.confirmDel = true; renderSheet(); break;
@@ -5384,6 +5443,7 @@ var qrcode = function() {
     else if (f.id === 'healthForm') { e.preventDefault(); saveHealth(f); }
     else if (f.id === 'incForm') { e.preventDefault(); addReading(f); }
     else if (f.id === 'weightForm') { e.preventDefault(); addWeight(f); }
+    else if (f.id === 'preyForm') { e.preventDefault(); savePrey(f); }
     else if (f.id === 'goalForm') { e.preventDefault(); saveGoal(f); }
     else if (f.id === 'expenseForm') { e.preventDefault(); saveExpense(f); }
     else if (f.id === 'waitForm') { e.preventDefault(); saveWait(f); }
