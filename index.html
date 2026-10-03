@@ -4030,7 +4030,8 @@ var qrcode = function() {
   function spec(k, v) { return v ? '<div class="spec-row"><span>' + k + '</span><span>' + esc(v) + '</span></div>' : ''; }
   function detailHtml(s) {
     var feeds = (s.feedings || []).slice().sort(function (a, b) { return a.date === b.date ? (b.id > a.id ? 1 : -1) : (b.date > a.date ? 1 : -1); });
-    var wsAll = (s.weights || []).slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }), ws = wsAll.slice(-6).reverse();
+    var wsAll = (s.weights || []).map(function (w, i) { return { date: w.date, g: Number(w.g), _i: i }; }).filter(function (w) { return w.date && w.g > 0; })
+      .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a._i - b._i; }), ws = wsAll.slice().reverse();
     var photos = (s.photos && s.photos.length) ? s.photos : (s.photo ? [s.photo] : []), hi = Math.min(ui.hero || 0, Math.max(0, photos.length - 1));
     var mn = morphNames(s.genes), fa = snakeById(s.fatherId), mo = snakeById(s.motherId);
     function parentRow(label, p, text) { return p ? '<div class="spec-row"><span>' + label + '</span><button class="linkbtn" type="button" data-act="open" data-id="' + p.id + '">' + esc(sname(p)) + '</button></div>' : spec(label, text); }
@@ -4054,13 +4055,17 @@ var qrcode = function() {
       (s.status === 'reserved' ? spec('שמור ל', s.reservedFor) + spec('מקדמה', Number(s.deposit) > 0 ? Number(s.deposit).toLocaleString('he-IL') + ' ₪' : '') : '') + '</div>';
     if (s.notes) h += '<p style="margin-top:14px;white-space:pre-wrap;color:var(--muted)">' + esc(s.notes) + '</p>';
     h += '<div class="section"><div class="row"><button class="btn btn-primary" type="button" data-act="feedform" data-id="' + s.id + '">+ תיעוד האכלה</button><button class="btn btn-soft" type="button" data-act="sharecard" data-id="' + s.id + '">כרטיס מכירה</button><button class="btn btn-soft" type="button" data-act="cert" data-id="' + s.id + '">תעודה לקונה</button></div>' +
-      '<div class="row" style="margin-top:10px"><button class="btn btn-ghost" type="button" data-act="addshed" data-id="' + s.id + '">+ התנשלות</button><button class="btn btn-ghost" type="button" data-act="healthform" data-id="' + s.id + '">+ בריאות</button><button class="btn btn-ghost" type="button" data-act="label" data-id="' + s.id + '">תווית להדפסה</button></div></div>';
-    if (wsAll.length > 1) {
-      h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">משקל</h3>' + weightChartSvg(wsAll) + ws.map(function (w, i) {
+      '<div class="row" style="margin-top:10px"><button class="btn btn-ghost" type="button" data-act="addweight">+ שקילה</button><button class="btn btn-ghost" type="button" data-act="addshed" data-id="' + s.id + '">+ התנשלות</button><button class="btn btn-ghost" type="button" data-act="healthform" data-id="' + s.id + '">+ בריאות</button><button class="btn btn-ghost" type="button" data-act="label" data-id="' + s.id + '">תווית להדפסה</button></div></div>';
+    // weighings: a form to add one (date + grams), the chart, and every weighing newest first with the change from the previous one
+    h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">שקילות</h3>' +
+      '<form id="weightForm" data-sid="' + s.id + '" class="incform"><label class="field">תאריך<input type="date" name="date" required value="' + todayISO() + '" max="' + todayISO() + '"></label>' +
+      '<label class="field">משקל (גרם)<input type="number" name="g" min="1" max="20000" step="1" inputmode="numeric" required></label><button class="btn btn-soft" type="submit">+ שקילה</button></form>' +
+      (wsAll.length > 1 ? weightChartSvg(wsAll) : '') +
+      (ws.length ? ws.map(function (w, i) {
         var p = ws[i + 1], d = p ? w.g - p.g : 0;
-        return '<div class="logrow"><span>' + fmtDate(w.date) + '</span><span>' + w.g + ' גרם' + (d ? ' <small style="display:inline;color:' + (d > 0 ? 'var(--green)' : 'var(--red)') + '">' + (d > 0 ? '+' : '') + d + '</small>' : '') + '</span></div>';
-      }).join('') + '</div>';
-    }
+        return '<div class="logrow"><span>' + fmtDate(w.date) + '</span><span style="display:flex;align-items:center;gap:8px">' + w.g + ' גרם' + (d ? ' <small style="display:inline;direction:ltr;unicode-bidi:isolate;color:' + (d > 0 ? 'var(--green)' : 'var(--red)') + '">' + (d > 0 ? '+' : '') + d + '</small>' : '') +
+          '<button class="icon-btn" type="button" data-act="delweight" data-id="' + s.id + '" data-wi="' + w._i + '" aria-label="מחיקת שקילה">✕</button></span></div>';
+      }).join('') : '<p class="note">עדיין לא תועדו שקילות.</p>') + '</div>';
     h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">האכלות</h3>' + (feeds.length ? feeds.map(function (f) {
       var r = feedRes(f), sub = [preyText(f), f.note].filter(Boolean).join(' · ');
       return '<div class="logrow"><div>' + fmtDate(f.date) + '<span class="fres ' + r + '">' + optLabel(FEED_RES, r) + '</span>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div><button class="icon-btn" type="button" data-act="delfeed" data-id="' + s.id + '" data-fid="' + f.id + '" aria-label="מחיקת האכלה">✕</button></div>';
@@ -4338,6 +4343,29 @@ var qrcode = function() {
         '<button class="icon-btn" type="button" data-act="delreading" data-id="' + p.id + '" data-rid="' + r.id + '" aria-label="מחיקת מדידה">✕</button></div>';
     }).join('') : '<p class="note">עוד אין מדידות.</p>';
     return h + '</div>';
+  }
+  // the snake's current weight is always the latest weighing by date
+  function syncWeight(s) {
+    var last = (s.weights || []).filter(function (w) { return w.date && Number(w.g) > 0; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).pop();
+    s.weight = last ? Number(last.g) : '';
+  }
+  function addWeight(f) {
+    var s = snakeById(f.dataset.sid); if (!s) return;
+    var fd = new FormData(f), date = String(fd.get('date') || ''), g = num(fd.get('g'));
+    if (!date) return toast('בחרו תאריך');
+    if (!(g > 0)) return toast('כתבו משקל בגרמים');
+    if (date > todayISO()) return toast('התאריך עוד לא הגיע');
+    s.weights = (s.weights || []).concat({ date: date, g: g });
+    syncWeight(s);
+    if (!save()) return;
+    renderSheet(); renderPage(); toast('השקילה נשמרה');
+  }
+  function delWeight(sid, i) {
+    var s = snakeById(sid); if (!s || !s.weights || !s.weights[i]) return;
+    s.weights.splice(i, 1);
+    syncWeight(s);
+    if (!save()) return;
+    renderSheet(); renderPage(); toast('השקילה נמחקה');
   }
   function addReading(f) {
     var p = pairOf(f.dataset.pid); if (!p) return;
@@ -5261,6 +5289,8 @@ var qrcode = function() {
       case 'addpair': openSheet({ type: 'pair', pid: null }); break;
       case 'openpair': openSheet({ type: 'pair', pid: id }); break;
       case 'delpair': if (confirm('למחוק את הזיווג?')) { db.pairs = db.pairs.filter(function (x) { return x.id !== id; }); save(); closeSheet(); renderPage(); toast('הזיווג נמחק'); } break;
+      case 'addweight': var wf = document.getElementById('weightForm'); if (wf) { try { wf.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { wf.scrollIntoView(); } setTimeout(function () { try { wf.querySelector('[name=g]').focus(); } catch (e) {} }, 350); } break;
+      case 'delweight': if (confirm('למחוק את השקילה?')) delWeight(id, Number(el.dataset.wi)); break;
       case 'addlock': var ll = document.getElementById('lockList'); if (ll) { ll.insertAdjacentHTML('beforeend', lockRowHtml('')); var lins = ll.querySelectorAll('input'); try { lins[lins.length - 1].focus(); } catch (e) {} } break;
       case 'dellock': var lr = el.closest('.lockrow'), lp = document.getElementById('lockList'); if (lr && lp) { if (lp.children.length > 1) lr.remove(); else lr.querySelector('input').value = ''; } break;
       case 'pairfail': var pp = pairOf(id); if (pp) { pp.failed = !pp.failed; save(); renderSheet(); renderPage(); } break;
@@ -5353,6 +5383,7 @@ var qrcode = function() {
     }
     else if (f.id === 'healthForm') { e.preventDefault(); saveHealth(f); }
     else if (f.id === 'incForm') { e.preventDefault(); addReading(f); }
+    else if (f.id === 'weightForm') { e.preventDefault(); addWeight(f); }
     else if (f.id === 'goalForm') { e.preventDefault(); saveGoal(f); }
     else if (f.id === 'expenseForm') { e.preventDefault(); saveExpense(f); }
     else if (f.id === 'waitForm') { e.preventDefault(); saveWait(f); }
