@@ -4057,6 +4057,7 @@ var qrcode = function() {
     return '<div class="feedrow"><button class="feedrow-main" type="button" data-act="open" data-id="' + s.id + '">' +
       (s.photo ? '<img class="avatar" src="' + s.photo + '" alt="">' : '<span class="avatar">' + initial(s) + '</span>') +
       '<span class="feedrow-txt"><b>' + esc(sname(s)) + ' <span class="fwhen ' + css + '">' + when + '</span></b>' +
+      '<small class="feedrow-id">משקל נוכחי: ' + (w > 0 ? w.toLocaleString('he-IL') + ' גרם' : 'לא נשקל') + '</small>' +
       '<small class="feedrow-id"><span>מין: ' + (s.sex === 'male' ? 'זכר ♂' : s.sex === 'female' ? 'נקבה ♀' : 'לא ידוע') + '</span> · גנים: <bdi dir="ltr">' + esc((s.genes || []).length ? s.genes.join(' × ') : 'Normal') + '</bdi></small>' +
       '<small>' + esc(sub) + '</small></span></button>' +
       '<div class="feedrow-acts"><button class="mini" type="button" data-act="preyform" data-id="' + s.id + '">טרף</button><button class="mini" type="button" data-act="quickfeed" data-id="' + s.id + '">✓ האכלתי</button></div></div>';
