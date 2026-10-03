@@ -3129,7 +3129,7 @@ var qrcode = function() {
       loginEl.innerHTML = '<div id="loginForm" style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px;text-align:center">' +
         '<div style="height:120px;background:var(--logo) center / contain no-repeat"></div>' +
         '<div style="color:#aaa;font-size:.9rem">כניסה למערכת</div>' +
-        '<button id="loginGoogle" type="button" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:12px;border:0;background:#fff;color:#1f1f1f;font-weight:600;font-size:1rem;cursor:pointer">' + GOOGLE_SVG + 'המשך עם Google</button>' +
+        '<button id="loginGoogle" type="button" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:12px;border:0;background:#fff;color:#1f1f1f;font-weight:600;font-size:1rem;cursor:pointer">' + GOOGLE_SVG + 'המשך עם גוגל</button>' +
         '<div style="display:flex;align-items:center;gap:10px;color:#777;font-size:.85rem"><span style="flex:1;height:1px;background:#333"></span>או עם מייל וסיסמה<span style="flex:1;height:1px;background:#333"></span></div>' +
         '<input id="loginMail" type="email" autocomplete="username" placeholder="מייל" dir="ltr" style="padding:13px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:1rem">' +
         '<div style="position:relative;display:flex">' +
@@ -3167,7 +3167,7 @@ var qrcode = function() {
       // Google sign-in in a popup (a redirect loses the session on iPhone, because the sign-in page lives on another domain)
       document.getElementById('loginGoogle').onclick = function () {
         var provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
+        provider.setCustomParameters({ prompt: 'select_account', hl: 'he' }); // hl: the Google window in Hebrew
         cloud.verifying = true;
         document.getElementById('loginMsg').textContent = '';
         firebase.auth().signInWithPopup(provider).then(function () { cloud.verifying = false; }).catch(function (e) {
@@ -3213,12 +3213,12 @@ var qrcode = function() {
     if (c === 'auth/network-request-failed') return 'אין חיבור לאינטרנט';
     if (c === 'permission-denied') return 'אין הרשאה, בדקי את כללי האבטחה';
     if (c === 'auth/admin-restricted-operation') return 'ההרשמה לאפליקציה סגורה. רק משתמשים קיימים יכולים להיכנס';
-    if (c === 'auth/popup-blocked') return 'הדפדפן חסם את חלון הכניסה של Google. אפשרו חלונות קופצים ונסו שוב';
-    if (c === 'auth/operation-not-allowed') return 'הכניסה עם Google עוד לא הופעלה ב־Firebase';
-    if (c === 'auth/unauthorized-domain') return 'הכתובת של האתר עוד לא אושרה ב־Firebase לכניסה עם Google';
+    if (c === 'auth/popup-blocked') return 'הדפדפן חסם את חלון הכניסה של גוגל. אפשרו חלונות קופצים ונסו שוב';
+    if (c === 'auth/operation-not-allowed') return 'הכניסה עם גוגל עוד לא הופעלה ב־Firebase';
+    if (c === 'auth/unauthorized-domain') return 'הכתובת של האתר עוד לא אושרה ב־Firebase לכניסה עם גוגל';
     if (c === 'auth/account-exists-with-different-credential') return 'המייל הזה כבר רשום עם סיסמה. היכנסו עם המייל והסיסמה';
-    if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment') return 'הכניסה עם Google לא עובדת בדפדפן שבתוך אפליקציה. פתחו את הקישור בספארי או בכרום';
-    if (c === 'auth/internal-error' && /disallowed_useragent/i.test(String(e && e.message))) return 'Google לא מאפשר להיכנס מתוך אפליקציה כמו אינסטגרם. פתחו את הקישור בספארי או בכרום';
+    if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment') return 'הכניסה עם גוגל לא עובדת בדפדפן שבתוך אפליקציה. פתחו את הקישור בספארי או בכרום';
+    if (c === 'auth/internal-error' && /disallowed_useragent/i.test(String(e && e.message))) return 'גוגל לא מאפשר להיכנס מתוך אפליקציה כמו אינסטגרם. פתחו את הקישור בספארי או בכרום';
     return 'שגיאה: ' + (c || 'לא ידועה');
   }
   function fbInit() {
