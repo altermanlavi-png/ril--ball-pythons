@@ -302,6 +302,7 @@
   .feedrow-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; background: none; border: none; color: inherit; text-align: start; padding: 0; font: inherit; }
   .feedrow-txt { display: grid; gap: 2px; min-width: 0; }
   .feedrow-txt small { color: var(--muted); font-size: .8rem; }
+  .feedrow-txt small.feedrow-id { color: var(--text); font-size: .84rem; }
   .feedrow-acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
   .fwhen { font-size: .76rem; font-weight: 700; margin-inline-start: 4px; }
   .fwhen.late { color: var(--red); } .fwhen.due { color: var(--amber); } .fwhen.ok { color: var(--muted); font-weight: 500; }
@@ -4055,7 +4056,9 @@ var qrcode = function() {
     var sub = [pt || 'לא נקבע טרף', w > 0 ? 'טרף מתאים: ⁦' + Math.round(w * 0.1) + '–' + Math.round(w * 0.15) + '⁩ גרם' : ''].filter(Boolean).join(' · ');
     return '<div class="feedrow"><button class="feedrow-main" type="button" data-act="open" data-id="' + s.id + '">' +
       (s.photo ? '<img class="avatar" src="' + s.photo + '" alt="">' : '<span class="avatar">' + initial(s) + '</span>') +
-      '<span class="feedrow-txt"><b>' + esc(sname(s)) + ' <span class="fwhen ' + css + '">' + when + '</span></b><small>' + esc(sub) + '</small></span></button>' +
+      '<span class="feedrow-txt"><b>' + esc(sname(s)) + ' <span class="fwhen ' + css + '">' + when + '</span></b>' +
+      '<small class="feedrow-id"><span>מין: ' + (s.sex === 'male' ? 'זכר ♂' : s.sex === 'female' ? 'נקבה ♀' : 'לא ידוע') + '</span> · גנים: <bdi dir="ltr">' + esc((s.genes || []).length ? s.genes.join(' × ') : 'Normal') + '</bdi></small>' +
+      '<small>' + esc(sub) + '</small></span></button>' +
       '<div class="feedrow-acts"><button class="mini" type="button" data-act="preyform" data-id="' + s.id + '">טרף</button><button class="mini" type="button" data-act="quickfeed" data-id="' + s.id + '">✓ האכלתי</button></div></div>';
   }
   function preyFormHtml(s) {
