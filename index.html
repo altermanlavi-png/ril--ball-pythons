@@ -3304,7 +3304,8 @@ var qrcode = function() {
   // a feeding record says what was offered and how it went: r = 'ate' (older records have no r) / 'refused' / 'regurg'
   var FEED_RES = [['ate', 'אכל'], ['refused', 'סירב'], ['regurg', 'הקיא']];
   var PREY = [['mouse', 'עכבר'], ['rat', 'חולדה'], ['asf', 'אפריקני (ASF)'], ['mastomys', 'מסטומיס'], ['hamster', 'אוגר'], ['chick', 'אפרוח'], ['other', 'אחר']];
-  var PREY_SIZE = [['pinky', 'Pinky'], ['fuzzy', 'Fuzzy'], ['hopper', 'Hopper'], ['weaned', 'Weaned'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['jumbo', 'Jumbo']];
+  // prey sizes in plain Hebrew (the stored keys stay the English ones, so older records still match)
+  var PREY_SIZE = [['pinky', 'יילוד'], ['fuzzy', 'עם פרווה ראשונה'], ['hopper', 'צעיר'], ['weaned', 'גמול'], ['small', 'קטן'], ['medium', 'בינוני'], ['large', 'גדול'], ['jumbo', 'ענק']];
   var PREY_STATE = [['ft', 'מופשר'], ['live', 'חי'], ['fk', 'מומת טרי']];
   var HEALTH_TYPES = [['vet', 'ביקור וטרינר'], ['med', 'תרופה / טיפול'], ['quarantine', 'הסגר'], ['shed', 'נשילה תקועה'], ['mites', 'קרדית'], ['resp', 'בעיה נשימתית'], ['injury', 'פציעה'], ['other', 'אחר']];
   function optLabel(list, k) { var o = list.find(function (x) { return x[0] === k; }); return o ? o[1] : ''; }
@@ -4151,7 +4152,7 @@ var qrcode = function() {
   // the snake's last prey is filled in, so a routine feeding is one tap on save
   function preyFieldsHtml(p) {
     return '<div class="grid3"><label class="field">טרף<select name="prey">' + optionsHtml(PREY, p.prey, '—') + '</select></label>' +
-      '<label class="field">גודל<select name="size" dir="ltr">' + optionsHtml(PREY_SIZE, p.size, '—') + '</select></label>' +
+      '<label class="field">גודל<select name="size">' + optionsHtml(PREY_SIZE, p.size, '—') + '</select></label>' +
       '<label class="field">מצב<select name="state">' + optionsHtml(PREY_STATE, p.state, '—') + '</select></label></div>' +
       '<label class="field">משקל הטרף (גרם)<input type="number" name="preyG" min="0" max="5000" inputmode="decimal" value="' + esc(p.preyG || '') + '" placeholder="לא חובה"><span class="hint">טרף מתאים שוקל בערך 10%–15% ממשקל הנחש</span></label>';
   }
