@@ -271,7 +271,11 @@
   .dot.k-laid, .bar.k-laid { background: var(--amber); }
   .dot.k-hatchdue { background: none; box-shadow: inset 0 0 0 1.8px var(--accent); }
   .bar.k-hatchdue { background: var(--accent); }
-  .dot.k-shed, .bar.k-shed { background: var(--teal); }
+  .dot.k-shed, .bar.k-shed, .dot.k-prelay, .bar.k-prelay { background: var(--teal); }
+  .dot.k-sheddue { background: none; box-shadow: inset 0 0 0 1.8px var(--teal); }
+  .bar.k-sheddue { background: var(--teal); }
+  .dot.k-laydue { background: none; box-shadow: inset 0 0 0 1.8px var(--amber); }
+  .bar.k-laydue, .dot.k-incprep, .bar.k-incprep { background: var(--amber); }
   .remind { background: var(--amber-soft); border: 1px solid var(--amber); border-radius: 14px; padding: 12px 14px; margin-top: 14px; }
   .remind .row { margin-top: 10px; }
 
@@ -303,6 +307,7 @@
   .feedrow-txt { display: grid; gap: 2px; min-width: 0; }
   .feedrow-txt small { color: var(--muted); font-size: .8rem; }
   .feedrow-txt small.feedrow-id { color: var(--text); font-size: .84rem; }
+  .feedrow-txt small.feedrow-warn { color: var(--amber); font-weight: 600; }
   .feedrow-acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
   .fwhen { font-size: .76rem; font-weight: 700; margin-inline-start: 4px; }
   .fwhen.late { color: var(--red); } .fwhen.due { color: var(--amber); } .fwhen.ok { color: var(--muted); font-weight: 500; }
@@ -3326,6 +3331,36 @@ var qrcode = function() {
     var pct = Math.round((1 - Number(last.g) / Number(top.g)) * 100);
     return pct >= 10 ? { pct: pct, from: Number(top.g), to: Number(last.g) } : null;
   }
+  function weightsAsc(s) { return (s.weights || []).filter(function (x) { return x.date && Number(x.g) > 0; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }); }
+  // an early sign: the last two weighings each lower than the one before, even when the total is under 10%
+  function weightFalling(s) {
+    var w = weightsAsc(s); if (w.length < 3) return null;
+    var a = Number(w[w.length - 3].g), b = Number(w[w.length - 2].g), c = Number(w[w.length - 1].g);
+    return b < a && c < b ? [a, b, c] : null;
+  }
+  // a female that laid in the last 90 days: her latest weight against her last weighing before laying
+  function postLay(s) {
+    if (s.sex !== 'female') return null;
+    var p = (db.pairs || []).filter(function (x) { return x.femaleId === s.id && x.laid && daysSince(x.laid) >= 0 && daysSince(x.laid) <= 90; })
+      .sort(function (a, b) { return a.laid < b.laid ? 1 : -1; })[0];
+    if (!p) return null;
+    var w = weightsAsc(s), before = null, now = null;
+    w.forEach(function (x) { if (x.date < p.laid) before = x; else now = x; });
+    return before ? { laid: p.laid, before: Number(before.g), now: now ? Number(now.g) : null } : null;
+  }
+  // sheds: the next one is the last shed plus the average gap of the last few (gaps under 14 days are treated as duplicates)
+  function shedDates(s) {
+    return (db.events || []).filter(function (e) { return e.type === 'shed' && e.sid === s.id && e.date; }).map(function (e) { return e.date; })
+      .filter(function (d, i, a) { return a.indexOf(d) === i; }).sort();
+  }
+  function nextShed(s) {
+    var d = shedDates(s); if (d.length < 2) return null;
+    var gaps = [];
+    for (var i = Math.max(1, d.length - 4); i < d.length; i++) { var g = Math.round((parseISO(d[i]) - parseISO(d[i - 1])) / 864e5); if (g >= 14) gaps.push(g); }
+    if (!gaps.length) return null;
+    var every = Math.round(gaps.reduce(function (n, g) { return n + g; }, 0) / gaps.length);
+    return { date: addDaysISO(d[d.length - 1], every), every: every, last: d[d.length - 1] };
+  }
   // health records whose end date ('until') has not passed yet: a quarantine or a course of treatment still running
   function activeHealth(s) { var t = todayISO(); return (s.health || []).filter(function (h) { return h.until && h.until >= t; }); }
   function snakeAlerts(s) {
@@ -3333,7 +3368,13 @@ var qrcode = function() {
     var a = [], n = refusalStreak(s), lf = lastFeed(s), wd = weightDrop(s);
     if (lf && feedRes(lf) === 'regurg' && daysSince(lf.date) < 14) a.push({ red: true, t: 'הקיא ' + rel(daysSince(lf.date)) + '. כדאי לחכות כשבועיים לפני ההאכלה הבאה' });
     if (n >= 3) a.push({ red: n >= 5, t: 'סירב ' + n + ' פעמים ברצף' + (lastAte(s) ? ', אכל לאחרונה ' + rel(daysSince(lastAte(s).date)) : '') });
-    if (wd) a.push({ red: wd.pct >= 15, t: 'ירד ' + wd.pct + '% במשקל (' + wd.from + ' ← ' + wd.to + ' גרם)' });
+    var pl = postLay(s), wf = weightFalling(s);
+    if (pl) {
+      // losing weight after laying is expected; what matters is getting back to her weight before laying
+      if (pl.now == null) a.push({ red: false, t: 'הטילה ב־' + fmtDate(pl.laid) + '. כדאי לשקול אותה כדי לעקוב אחרי ההתאוששות (לפני ההטלה: ' + pl.before + ' גרם)' });
+      else if (pl.now < pl.before * 0.95) a.push({ red: false, t: 'מתאוששת מההטלה: ' + pl.now + ' גרם מתוך ' + pl.before + ' לפני ההטלה (' + Math.round(pl.now / pl.before * 100) + '%)' });
+    } else if (wd) a.push({ red: wd.pct >= 15, t: 'ירד ' + wd.pct + '% במשקל (' + wd.from + ' ← ' + wd.to + ' גרם)' });
+    else if (wf) a.push({ red: false, t: 'יורד במשקל בשתי השקילות האחרונות (' + wf.join(' ← ') + ' גרם)' });
     activeHealth(s).forEach(function (h) { a.push({ red: false, t: optLabel(HEALTH_TYPES, h.type) + ' עד ' + fmtDate(h.until) }); });
     return a;
   }
@@ -3599,7 +3640,7 @@ var qrcode = function() {
 
   // the nearest thing worth knowing about in the next two weeks (pairings, expected hatch, your own events)
   function nextEvent() {
-    var map = calMap(), t = todayISO(), kinds = { custom: 1, shed: 1, pair: 1, ovul: 1, laid: 1, hatchdue: 1 };
+    var map = calMap(), t = todayISO(), kinds = { custom: 1, shed: 1, pair: 1, ovul: 1, prelay: 1, laid: 1, hatchdue: 1, laydue: 1, incprep: 1 };
     for (var i = 0; i <= 14; i++) {
       var d = addDaysISO(t, i), e = (map[d] || []).find(function (x) { return kinds[x.k]; });
       if (e) return { date: d, text: e.title + (e.time ? ' · ' + e.time : '') + ' · ' + (i === 0 ? 'היום' : i === 1 ? 'מחר' : 'בעוד ' + i + ' ימים') };
@@ -3700,7 +3741,7 @@ var qrcode = function() {
   /* ---------- diary: month calendar (like a phone calendar app) ---------- */
   var DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   var WD = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
-  var KORDER = { custom: 0, health: 0, shed: 1, pair: 2, ovul: 3, laid: 4, hatchdue: 5, hatch: 6, feed: 7 };
+  var KORDER = { custom: 0, health: 0, shed: 1, sheddue: 1, pair: 2, ovul: 3, prelay: 3, incprep: 4, laydue: 4, laid: 4, hatchdue: 5, hatch: 6, feed: 7 };
   function isoOf(y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); }
   function addDaysISO(s, n) { var d = parseISO(s); d.setDate(d.getDate() + n); return isoOf(d.getFullYear(), d.getMonth(), d.getDate()); }
   // every dated thing in one place: feedings, hatch dates, the next feeding that is due, and your own events
@@ -3729,6 +3770,18 @@ var qrcode = function() {
       });
       var eh = expectedHatch(p);
       if (eh) put(eh, { k: 'hatchdue', title: 'בקיעה (צפי) — ' + nm, sub: p.eggs ? p.eggs + ' ביצים' : '', pid: p.id });
+      var el = expectedLay(p);
+      if (el) {
+        if (el.byOvul && !p.prelay) put(el.shed, { k: 'sheddue', title: 'שיל לפני הטלה (צפי) — ' + nm, sub: 'בערך 16 ימים אחרי הביוץ', pid: p.id });
+        put(el.date, { k: 'laydue', title: 'הטלה (צפי) — ' + nm, sub: el.byOvul ? 'לפי הביוץ, בערך' : '30 יום אחרי השיל', pid: p.id });
+        put(addDaysISO(el.date, -INC_PREP_BEFORE), { k: 'incprep', title: 'להכין אינקובטור — ' + nm, sub: 'הטלה צפויה ב־' + fmtDate(el.date), pid: p.id });
+      }
+    });
+    // each snake's next shed, from the gaps between its recorded sheds
+    db.snakes.forEach(function (s) {
+      if (s.status === 'sold') return;
+      var ns = nextShed(s);
+      if (ns && ns.date >= addDaysISO(t, -7)) put(ns.date, { k: 'sheddue', title: 'שיל צפוי — ' + sname(s), sub: 'בערך כל ' + ns.every + ' ימים', sid: s.id });
     });
     Object.keys(map).forEach(function (k) {
       map[k].sort(function (a, b) { return (KORDER[a.k] - KORDER[b.k]) || String(a.time || '').localeCompare(String(b.time || '')); });
@@ -4050,7 +4103,9 @@ var qrcode = function() {
     return h;
   }
   function feedRowHtml(x) {
-    var s = x.s, d = Math.round((parseISO(x.next) - parseISO(todayISO())) / 864e5), pt = preyText(s.lastPrey || {}), w = Number(s.weight);
+    var s = x.s, d = Math.round((parseISO(x.next) - parseISO(todayISO())) / 864e5), pt = preyText(s.lastPrey || {}), w = Number(s.weight) || Number((weightsAsc(s).pop() || {}).g) || 0;
+    var ns = nextShed(s), t = todayISO(), al = snakeAlerts(s);
+    var shedSoon = ns && t >= addDaysISO(ns.date, -7) && t <= addDaysISO(ns.date, 5) && !shedDates(s).some(function (sd) { return sd > addDaysISO(ns.date, -14); });
     function days(n) { return n === 1 ? 'יום' : n === 2 ? 'יומיים' : n + ' ימים'; }
     var when = d < 0 ? 'באיחור של ' + days(-d) : d === 0 ? 'היום' : d === 1 ? 'מחר' : 'בעוד ' + days(d), css = d < 0 ? 'late' : d === 0 ? 'due' : 'ok';
     var sub = [pt || 'לא נקבע טרף', w > 0 ? 'טרף מתאים: ⁦' + Math.round(w * 0.1) + '–' + Math.round(w * 0.15) + '⁩ גרם' : ''].filter(Boolean).join(' · ');
@@ -4059,7 +4114,9 @@ var qrcode = function() {
       '<span class="feedrow-txt"><b>' + esc(sname(s)) + ' <span class="fwhen ' + css + '">' + when + '</span></b>' +
       '<small class="feedrow-id">משקל נוכחי: ' + (w > 0 ? w.toLocaleString('he-IL') + ' גרם' : 'לא נשקל') + '</small>' +
       '<small class="feedrow-id"><span>מין: ' + (s.sex === 'male' ? 'זכר ♂' : s.sex === 'female' ? 'נקבה ♀' : 'לא ידוע') + '</span> · גנים: <bdi dir="ltr">' + esc((s.genes || []).length ? s.genes.join(' × ') : 'Normal') + '</bdi></small>' +
-      '<small>' + esc(sub) + '</small></span></button>' +
+      '<small>' + esc(sub) + '</small>' +
+      (shedSoon ? '<small class="feedrow-warn">שיל צפוי ' + esc(inDays(ns.date)) + ' · עדיף לחכות עם ההאכלה עד אחרי השיל</small>' : '') +
+      (al.length ? '<small class="feedrow-warn">⚠ ' + esc(al[0].t) + '</small>' : '') + '</span></button>' +
       '<div class="feedrow-acts"><button class="mini" type="button" data-act="preyform" data-id="' + s.id + '">טרף</button><button class="mini" type="button" data-act="quickfeed" data-id="' + s.id + '">✓ האכלתי</button></div></div>';
   }
   function preyFormHtml(s) {
@@ -4108,9 +4165,10 @@ var qrcode = function() {
     h += warnHtml(s.genes);
     h += alertsBox(snakeAlerts(s));
     h += waitingForHtml(s);
-    var la = lastAte(s);
+    var la = lastAte(s), ns = nextShed(s);
     h += '<div class="spec">' + spec('תאריך בקיעה', s.hatch ? fmtDate(s.hatch) : '') + spec('משקל', s.weight ? s.weight + ' גרם' : '') + spec('מיקום', s.location) + spec('האכלה כל', s.feedEvery ? s.feedEvery + ' ימים' : '') +
       spec('אכל לאחרונה', la ? fmtDate(la.date) + ' (' + rel(daysSince(la.date)) + ')' + (preyText(la) ? ' · ' + preyText(la) : '') : '') +
+      spec('שיל הבא (צפי)', ns ? fmtDate(ns.date) + ' (' + inDays(ns.date) + ') · בערך כל ' + ns.every + ' ימים' : '') +
       parentRow('אב', fa, s.fatherText) + parentRow('אם', mo, s.motherText) + spec('מחיר רכישה', Number(s.buyPrice) > 0 ? Number(s.buyPrice).toLocaleString('he-IL') + ' ₪' : '') +
       (s.status === 'breeder' ? spec('ערך הנחש', Number(s.value) > 0 ? Number(s.value).toLocaleString('he-IL') + ' ₪' : '') : spec('מחיר מכירה', Number(s.salePrice) > 0 ? Number(s.salePrice).toLocaleString('he-IL') + ' ₪' : '')) + spec('קונה', s.buyer) + spec('תאריך מכירה', s.soldDate ? fmtDate(s.soldDate) : '') +
       (s.status === 'reserved' ? spec('שמור ל', s.reservedFor) + spec('מקדמה', Number(s.deposit) > 0 ? Number(s.deposit).toLocaleString('he-IL') + ' ₪' : '') : '') + '</div>';
@@ -4134,7 +4192,8 @@ var qrcode = function() {
     var sheds = (db.events || []).filter(function (e) { return e.type === 'shed' && e.sid === s.id; }).sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
     h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">התנשלויות</h3>' + (sheds.length ? sheds.map(function (e) {
       return '<div class="logrow"><div>' + fmtDate(e.date) + (e.note ? '<small>' + esc(e.note) + '</small>' : '') + '</div><button class="icon-btn" type="button" data-act="editevent" data-id="' + e.id + '" aria-label="עריכת התנשלות">✎</button></div>';
-    }).join('') : '<p class="note">עדיין לא תועדו התנשלויות.</p>') + '</div>';
+    }).join('') : '<p class="note">עדיין לא תועדו התנשלויות.</p>') +
+      (sheds.length < 2 ? '<p class="hint" style="margin-top:8px">אחרי שתי התנשלויות מתועדות, האפליקציה תחשב מתי צפויה ההתנשלות הבאה ותציג אותה ביומן.</p>' : '') + '</div>';
     var hs = (s.health || []).slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }), t = todayISO();
     h += '<div class="section"><h3 class="section-title" style="margin-bottom:6px">בריאות</h3>' + (hs.length ? hs.map(function (x) {
       var sub = [x.until ? (x.until >= t ? 'עד ' : 'הסתיים ') + fmtDate(x.until) : '', x.note].filter(Boolean).join(' · ');
@@ -4332,8 +4391,21 @@ var qrcode = function() {
   }
 
   /* ================= v3: pairs, morph names, warnings, chart, bulk feeding, sales, calendar file, photos ================= */
-  var PAIR_STEPS = [['lock', 'זיווג'], ['ovulation', 'ביוץ'], ['laid', 'הטלה'], ['hatched', 'בקיעה']];
-  var STEP_KIND = { lock: 'pair', ovulation: 'ovul', laid: 'laid', hatched: 'hatch' };
+  var PAIR_STEPS = [['lock', 'זיווג'], ['ovulation', 'ביוץ'], ['prelay', 'שיל לפני הטלה'], ['laid', 'הטלה'], ['hatched', 'בקיעה']];
+  var STEP_KIND = { lock: 'pair', ovulation: 'ovul', prelay: 'prelay', laid: 'laid', hatched: 'hatch' };
+  // breeders' timeline: the pre-lay shed comes about 16 days after ovulation, and laying about 30 days after that shed
+  var PRELAY_AFTER_OVUL = 16, LAY_AFTER_PRELAY = 30, INC_PREP_BEFORE = 5;
+  function expectedLay(p) {
+    if (p.laid || p.failed) return null;
+    if (p.prelay) return { date: addDaysISO(p.prelay, LAY_AFTER_PRELAY), byOvul: false };
+    if (p.ovulation) return { date: addDaysISO(p.ovulation, PRELAY_AFTER_OVUL + LAY_AFTER_PRELAY), byOvul: true, shed: addDaysISO(p.ovulation, PRELAY_AFTER_OVUL) };
+    return null;
+  }
+  function inDays(iso) { var d = Math.round((parseISO(iso) - parseISO(todayISO())) / 864e5); return d === 0 ? 'היום' : d === 1 ? 'מחר' : d > 1 ? 'בעוד ' + d + ' ימים' : 'עבר לפני ' + (-d) + ' ימים'; }
+  function layLine(p) {
+    var el = expectedLay(p); if (!el) return '';
+    return (el.byOvul && !p.prelay ? 'שיל לפני הטלה (צפי): ' + fmtDate(el.shed) + ' · ' : '') + 'צפי הטלה' + (el.byOvul ? ' (בערך)' : '') + ': ' + fmtDate(el.date) + ' · ' + inDays(el.date);
+  }
   var EVENT_TYPES = { feed: 'האכלה', shed: 'התנשלות', pair: 'זיווג', ovul: 'ביוץ', laid: 'הטלה', hatch: 'בקיעה' };
   function pairOf(id) { return (db.pairs || []).find(function (p) { return p.id === id; }) || null; }
   function pairName(p) { var m = snakeById(p.maleId), f = snakeById(p.femaleId); return (m ? sname(m) : '?') + ' × ' + (f ? sname(f) : '?'); }
@@ -4459,6 +4531,7 @@ var qrcode = function() {
       '<span class="stage ' + st.css + '">' + esc(st.label + (st.date ? ' · ' + fmtDate(st.date) : '')) + '</span>' +
       (eh ? '<span class="note">יום ' + incDay(p) + ' מתוך ' + incDays(p) + ' · צפי בקיעה: ' + fmtDate(eh) + (left >= 0 ? ' · בעוד ' + left + ' ימים' : ' · עבר לפני ' + (-left) + ' ימים') + '</span>' +
         '<span class="incbar"><i style="width:' + Math.max(0, Math.min(100, incDay(p) / incDays(p) * 100)) + '%"></i></span>' : '') +
+      (layLine(p) ? '<span class="note" style="color:var(--amber)">' + esc(layLine(p)) + '</span>' : '') +
       (eggsLine(p) ? '<span class="note">' + esc(eggsLine(p)) + '</span>' : '') + '</button>';
   }
   function pairsView() {
@@ -4618,6 +4691,7 @@ var qrcode = function() {
       var eh = expectedHatch(p);
       h += '<div class="section"><h3 class="section-title" style="margin-bottom:8px">פעולות</h3>' +
         (eh ? '<p class="note" style="margin-bottom:8px">צפי בקיעה: ' + fmtDate(eh) + '</p>' : '') +
+        (layLine(p) ? '<p class="note" style="margin-bottom:8px">' + esc(layLine(p)) + '. להכין את האינקובטור כמה ימים לפני, כדי שהטמפרטורה תתייצב.</p>' : '') +
         '<button class="btn btn-primary wide" type="button" data-act="pairlabel" data-id="' + p.id + '">תווית לקופסת הטלה</button>' +
         '<button class="btn btn-soft wide" type="button" data-act="pair2calc" data-id="' + p.id + '" style="margin-top:10px">פתיחה במחשבון גנטיקה</button>' +
         '<div class="row" style="margin-top:10px"><label class="field" style="margin:0;flex:1">מספר צאצאים ליצירה<input type="number" id="kidsN" min="1" max="40" inputmode="numeric" value="' + (p.eggs || '') + '"></label>' +
