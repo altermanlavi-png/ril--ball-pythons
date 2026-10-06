@@ -139,12 +139,13 @@
   /* sheet */
   .overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
   .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
-  .sheet { position: relative; width: 100%; max-width: 600px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-bottom: none; border-radius: 22px 22px 0 0; padding: 14px 18px calc(28px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); overscroll-behavior: contain; }
+  .sheet { position: relative; width: 100%; max-width: 600px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; overflow-x: hidden; background: var(--surface); border: 1px solid var(--line); border-bottom: none; border-radius: 22px 22px 0 0; padding: 14px 18px calc(28px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); overscroll-behavior: contain; }
   /* on a computer the sheet is a centered window, so its end is visible */
   @media (min-width: 700px) {
     .overlay { align-items: center; padding: 24px 16px; box-sizing: border-box; }
     .sheet { max-height: 100%; border-bottom: 1px solid var(--line); border-radius: 22px; padding-bottom: 24px; }
   }
+  .sheet input, .sheet select, .sheet textarea { max-width: 100%; }
   .sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
   .sheet-head .acts { display: flex; gap: 8px; }
   .sheet-title { font: 600 1.5rem/1.25 var(--sans); margin: 10px 0 16px; }
@@ -5608,6 +5609,11 @@ var qrcode = function() {
     var t = e.target;
     if (t && t.dataset && (t.dataset.gene || t.dataset.lin)) setTimeout(function () { if (document.activeElement !== t) hideSug(); }, 160);
   });
+  // a sheet never moves sideways: on iPhone, opening a date field could scroll the pairing sheet to the side
+  (function () {
+    var sh = document.getElementById('sheet');
+    if (sh) sh.addEventListener('scroll', function () { if (sh.scrollLeft) sh.scrollLeft = 0; }, { passive: true });
+  })();
   // iPhone bug (iOS 26): once the keyboard closes, the visible screen can stay shifted down from where fixed parts are drawn,
   // so the bottom bar floats up the page while scrolling. visualViewport.offsetTop is that shift: move the fixed parts by it (CSS --vv-y).
   // While typing the shift is normal iPhone behavior, so it is left alone then.
