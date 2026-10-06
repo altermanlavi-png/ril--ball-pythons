@@ -463,6 +463,14 @@
 
   .toast { position: fixed; bottom: calc(84px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: .88rem; z-index: 100; max-width: 88vw; text-align: center; }
   @media (prefers-reduced-motion: no-preference) { .sheet { animation: up .22s ease-out; } @keyframes up { from { transform: translateY(20px); opacity: .6; } } }
+  /* iPhone bug (iOS 26): after the keyboard closes the screen can stay shifted, so the fixed parts (bar, sheets, toast) float up the page.
+     --vv-y is that shift, measured by the script below; it is 0 whenever the phone behaves */
+  body::before { top: var(--vv-y, 0px); bottom: calc(0px - var(--vv-y, 0px)); }
+  .nav { bottom: calc(0px - var(--vv-y, 0px)); }
+  .overlay { top: var(--vv-y, 0px); bottom: calc(0px - var(--vv-y, 0px)); }
+  .selbar { bottom: calc(68px + env(safe-area-inset-bottom) - var(--vv-y, 0px)); }
+  .toast { bottom: calc(84px + env(safe-area-inset-bottom) - var(--vv-y, 0px)); }
+  .custexit { top: calc(10px + env(safe-area-inset-top) + var(--vv-y, 0px)); }
 </style>
 </head>
 <body>
@@ -5503,6 +5511,27 @@ var qrcode = function() {
     var t = e.target;
     if (t && t.dataset && (t.dataset.gene || t.dataset.lin)) setTimeout(function () { if (document.activeElement !== t) hideSug(); }, 160);
   });
+  // iPhone bug (iOS 26): once the keyboard closes, the visible screen can stay shifted down from where fixed parts are drawn,
+  // so the bottom bar floats up the page while scrolling. visualViewport.offsetTop is that shift: move the fixed parts by it (CSS --vv-y).
+  // While typing the shift is normal iPhone behavior, so it is left alone then.
+  (function () {
+    var vv = window.visualViewport, root = document.documentElement, last = 0;
+    if (!vv) return;
+    function typing() {
+      var a = document.activeElement;
+      return !!a && (a.isContentEditable || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|reset|file|range|color|image)$/.test(a.type)));
+    }
+    function fix() {
+      var y = !typing() && Math.abs(vv.scale - 1) < 0.01 ? Math.round(vv.offsetTop) : 0;
+      if (Math.abs(y) < 2) y = 0;
+      if (y !== last) { last = y; root.style.setProperty('--vv-y', y + 'px'); }
+    }
+    vv.addEventListener('resize', fix);
+    vv.addEventListener('scroll', fix);
+    window.addEventListener('scroll', fix, { passive: true });
+    document.addEventListener('focusin', fix);
+    document.addEventListener('focusout', function () { setTimeout(fix, 0); setTimeout(fix, 400); setTimeout(fix, 1000); });
+  })();
   document.addEventListener('change', function (e) {
     var t = e.target;
     // calculator: picking a snake loads its genetics right away and keeps it shown as picked
