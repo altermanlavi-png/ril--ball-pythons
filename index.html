@@ -134,6 +134,7 @@
   .nav-mi { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: none; border: none; border-radius: 10px; color: var(--text); font-size: .95rem; text-align: start; }
   .nav-mi svg { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .nav-mi.on { background: var(--accent-soft); font-weight: 600; }
+  .nav-sep { height: 1px; background: var(--line); margin: 4px 8px; }
 
   /* sheet */
   .overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
@@ -3027,6 +3028,63 @@ var qrcode = function() {
   }
   // ---- Firebase (Google) mode: used when the page is hosted on its own address and the Firebase scripts loaded ----
   var FB_CFG = { apiKey: 'AIzaSyAhHHuHhcMuiDZAnxR6LlyHporQJCn6bUw', authDomain: 'ril-ball-pythons.firebaseapp.com', projectId: 'ril-ball-pythons', storageBucket: 'ril-ball-pythons.firebasestorage.app', messagingSenderId: '31867361524', appId: '1:31867361524:web:c5c2063da8cc6cfb4ee6a1' };
+  /* ---------- several accounts on one device, each staying signed in, so switching needs no password ----------
+     Every account lives in its own Firebase app ("slot"), and Firebase keeps each slot's sign-in on the device separately.
+     The first account uses the default slot, so whoever was signed in before this existed stays signed in. */
+  var SLOT_KEY = KEY + '-slot', ACC_KEY = KEY + '-accounts', DEF_SLOT = '[DEFAULT]', fbApp = null;
+  function accList() { try { var a = JSON.parse(localStorage.getItem(ACC_KEY)); return Array.isArray(a) ? a.filter(function (x) { return x && x.slot && x.uid; }) : []; } catch (e) { return []; } }
+  function accSave(list) { try { localStorage.setItem(ACC_KEY, JSON.stringify(list)); } catch (e) {} }
+  function activeSlot() { try { return localStorage.getItem(SLOT_KEY) || DEF_SLOT; } catch (e) { return DEF_SLOT; } }
+  function slotApp(slot) {
+    var found = firebase.apps.find(function (a) { return a.name === slot; });
+    return found || (slot === DEF_SLOT ? firebase.initializeApp(FB_CFG) : firebase.initializeApp(FB_CFG, slot));
+  }
+  function fbAuth() { return fbApp.auth(); }
+  function accRemember(u) {
+    var slot = fbApp.name, list = accList(), at = list.findIndex(function (x) { return x.slot === slot; });
+    // the same account signed in again in another slot: that older sign-in is dropped, so it is listed once
+    list.filter(function (x) { return x.uid === u.uid && x.slot !== slot; }).forEach(function (x) { try { slotApp(x.slot).auth().signOut(); } catch (e) {} });
+    var me = { slot: slot, uid: u.uid, email: u.email || '' };
+    if (at >= 0) list[at] = me; else list.push(me);
+    accSave(list.filter(function (x) { return x.slot === slot || x.uid !== u.uid; }));
+  }
+  function accForget(slot) { accSave(accList().filter(function (x) { return x.slot !== slot; })); }
+  // waits until every change is in the cloud (at most a few seconds: with no internet the writes would wait forever)
+  async function cloudFlush() {
+    var until = Date.now() + 8000;
+    while ((cloud.busy || cloud.dirty) && Date.now() < until) {
+      if (!cloud.busy) { clearTimeout(cloud.timer); await Promise.race([cloudSync(), new Promise(function (r) { setTimeout(r, until - Date.now()); })]); }
+      else await new Promise(function (r) { setTimeout(r, 250); });
+    }
+  }
+  // switching loads the other account from the cloud. This device keeps one account's data at a time, so changes that
+  // have not reached the cloud yet are sent first; if they cannot be sent, the switch waits rather than lose them
+  function switchAccount(slot) {
+    if (fbApp && slot === fbApp.name && cloud.on) return closeSheet();
+    var target = accList().find(function (x) { return x.slot === slot; }), mine = '';
+    try { mine = localStorage.getItem(KEY + '-uid') || ''; } catch (e) {}
+    function leave() { try { localStorage.setItem(SLOT_KEY, slot); } catch (e) {} location.reload(); }
+    if (!cloud.on) {
+      if (isPending() && !(target && target.uid === mine)) return toast('יש במכשיר שינויים שעוד לא עלו לענן. התחברו לאינטרנט ונסו שוב');
+      return leave();
+    }
+    toast('שומר את השינויים בענן…');
+    cloudFlush().then(function () {
+      if (cloud.dirty || cloud.busy || isPending()) return toast('השינויים עוד לא עלו לענן. בדקו את החיבור לאינטרנט ונסו שוב');
+      leave();
+    });
+  }
+  function addAccount() { switchAccount('acc' + Date.now().toString(36)); }
+  function accountsSheetHtml() {
+    var cur = fbApp ? fbApp.name : '', list = accList();
+    return '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button></div><h2 class="sheet-title">החלפת משתמש</h2>' +
+      '<p class="note" style="margin-bottom:12px">כל משתמש שנכנס במכשיר הזה נשאר מחובר, ולכן המעבר ביניהם לא דורש סיסמה.</p>' +
+      list.map(function (a) {
+        return '<div class="logrow"><div dir="ltr" style="min-width:0;overflow:hidden;text-overflow:ellipsis">' + esc(a.email || 'משתמש') + '</div>' +
+          (a.slot === cur ? '<span class="note" style="flex:none">מחובר עכשיו</span>' : '<button class="btn btn-soft" type="button" data-act="switchacc" data-id="' + esc(a.slot) + '" style="min-height:38px;padding:6px 14px;flex:none">מעבר</button>') + '</div>';
+      }).join('') +
+      '<button class="btn btn-soft wide" type="button" data-act="addacc" style="margin-top:14px">+ הוספת משתמש</button>';
+  }
   /* ---------- public catalog: a copy of ONLY the snakes marked "for sale", readable by anyone with the link ----------
      Firestore: shops/{uid} (title, count, updated) and shops/{uid}/items/{snakeId}. Nothing else is ever copied there. */
   function shopItems() {
@@ -3151,7 +3209,7 @@ var qrcode = function() {
   // with no internet the app opens from what is saved on this device; the cloud catches up when the connection returns
   function startOffline() {
     loginHide(); renderPage(); openDeepLink();
-    window.addEventListener('online', function back() { window.removeEventListener('online', back); if (!cloud.on && firebase.auth().currentUser) cloudStart().catch(function () {}); });
+    window.addEventListener('online', function back() { window.removeEventListener('online', back); if (!cloud.on && fbAuth().currentUser) cloudStart().catch(function () {}); });
   }
   var loginEl = null;
   var GOOGLE_SVG = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
@@ -3165,6 +3223,7 @@ var qrcode = function() {
       loginEl.innerHTML = '<div id="loginForm" style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px;text-align:center">' +
         '<div style="height:120px;background:var(--logo) center / contain no-repeat"></div>' +
         '<div style="color:#aaa;font-size:.9rem">כניסה למערכת</div>' +
+        '<div id="loginAccs" style="display:flex;flex-direction:column;gap:10px"></div>' +
         '<button id="loginGoogle" type="button" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:12px;border:0;background:#fff;color:#1f1f1f;font-weight:600;font-size:1rem;cursor:pointer">' + GOOGLE_SVG + 'המשך עם גוגל</button>' +
         '<div style="display:flex;align-items:center;gap:10px;color:#777;font-size:.85rem"><span style="flex:1;height:1px;background:#333"></span>או עם מייל וסיסמה<span style="flex:1;height:1px;background:#333"></span></div>' +
         '<input id="loginMail" type="email" autocomplete="username" placeholder="מייל" dir="ltr" style="padding:13px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:1rem">' +
@@ -3179,7 +3238,7 @@ var qrcode = function() {
       var go = function (create) {
         var m = document.getElementById('loginMail').value.trim(), p = document.getElementById('loginPass').value;
         if (!m || !p) return loginShow('הכניסי מייל וסיסמה');
-        var a = firebase.auth();
+        var a = fbAuth();
         cloud.verifying = true;
         (create ? a.createUserWithEmailAndPassword(m, p) : a.signInWithEmailAndPassword(m, p)).then(function (cred) {
           var u = cred && cred.user;
@@ -3197,7 +3256,7 @@ var qrcode = function() {
       document.getElementById('loginForgot').onclick = function () {
         var m = document.getElementById('loginMail').value.trim();
         if (!m) return loginShow('הכניסי קודם את המייל ואז לחצי על שכחתי סיסמה');
-        firebase.auth().sendPasswordResetEmail(m).then(function () { loginShow('נשלח מייל לאיפוס סיסמה, בדקי גם בספאם'); }).catch(function (e) { loginShow(fbErr(e)); });
+        fbAuth().sendPasswordResetEmail(m).then(function () { loginShow('נשלח מייל לאיפוס סיסמה, בדקי גם בספאם'); }).catch(function (e) { loginShow(fbErr(e)); });
       };
       document.getElementById('loginPass').onkeydown = function (e) { if (e.key === 'Enter') go(false); };
       // Google sign-in in a popup (a redirect loses the session on iPhone, because the sign-in page lives on another domain)
@@ -3206,7 +3265,7 @@ var qrcode = function() {
         provider.setCustomParameters({ prompt: 'select_account', hl: 'he' }); // hl: the Google window in Hebrew
         cloud.verifying = true;
         document.getElementById('loginMsg').textContent = '';
-        firebase.auth().signInWithPopup(provider).then(function () { cloud.verifying = false; }).catch(function (e) {
+        fbAuth().signInWithPopup(provider).then(function () { cloud.verifying = false; }).catch(function (e) {
           cloud.verifying = false;
           if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) return;
           loginShow(fbErr(e));
@@ -3224,6 +3283,12 @@ var qrcode = function() {
       };
     }
     loginEl.style.display = 'flex';
+    // the other accounts already signed in on this device: one tap goes back to them (also the way out of "add a user")
+    var accBox = document.getElementById('loginAccs'), others = fbApp ? accList().filter(function (x) { return x.slot !== fbApp.name; }) : [];
+    accBox.innerHTML = others.length ? others.map(function (x) {
+      return '<button type="button" data-slot="' + esc(x.slot) + '" style="padding:12px;border-radius:12px;border:1px solid #555;background:#111;color:#fff;font-size:.95rem">המשך בתור <span dir="ltr">' + esc(x.email || 'משתמש') + '</span></button>';
+    }).join('') + '<div style="display:flex;align-items:center;gap:10px;color:#777;font-size:.85rem"><span style="flex:1;height:1px;background:#333"></span>או כניסה עם משתמש אחר<span style="flex:1;height:1px;background:#333"></span></div>' : '';
+    Array.prototype.forEach.call(accBox.querySelectorAll('[data-slot]'), function (b) { b.onclick = function () { switchAccount(b.dataset.slot); }; });
     document.getElementById('loginForm').style.visibility = 'visible';
     var cv = document.getElementById('loginLogo'); if (cv) cv.remove();
     document.getElementById('loginMsg').textContent = msg || '';
@@ -3258,13 +3323,14 @@ var qrcode = function() {
     return 'שגיאה: ' + (c || 'לא ידועה');
   }
   function fbInit() {
-    firebase.initializeApp(FB_CFG);
-    var auth = firebase.auth(), fs = firebase.firestore();
+    fbApp = slotApp(activeSlot());
+    var auth = fbApp.auth(), fs = fbApp.firestore();
     cloud.fb = true;
     loginCover();
     auth.onAuthStateChanged(function (u) {
       if (!u) { cloud.on = false; cloud.email = ''; if (!cloud.verifying) loginShow(''); return; }
       if (!u.emailVerified) { if (!cloud.verifying) auth.signOut().then(function () { loginShow('המייל עוד לא אומת. היכנסי שוב כדי לקבל מייל אימות חדש.'); }); return; }
+      accRemember(u);
       loginCover(); // signed in: black screen with the logo while the collection loads
       cloud.db = fs; cloud.uid = u.uid; cloud.email = u.email || ''; 
       try { var prev = localStorage.getItem(KEY + '-uid'); if (prev && prev !== cloud.uid) { db = normDb({}); localWrite(); setPending(false); } localStorage.setItem(KEY + '-uid', cloud.uid); } catch (e) {}
@@ -3272,7 +3338,7 @@ var qrcode = function() {
       cloudStart().then(function () { loginHide(); openDeepLink(); }).catch(function (e) {
         cloud.error = (e && e.code) || 'error';
         if (cloud.error === 'permission-denied') { auth.signOut().then(function () { loginShow(fbErr(e)); }); }
-        else { loginHide(); renderPage(); openDeepLink(); var again = function () { if (cloud.on || !firebase.auth().currentUser) return; cloudStart().catch(function () { setTimeout(again, 30000); }); }; setTimeout(again, 15000); }
+        else { loginHide(); renderPage(); openDeepLink(); var again = function () { if (cloud.on || !fbAuth().currentUser) return; cloudStart().catch(function () { setTimeout(again, 30000); }); }; setTimeout(again, 15000); }
       });
     });
   }
@@ -3653,7 +3719,7 @@ var qrcode = function() {
       '<button class="nav-btn' + (inMore || ui.navMore ? ' on' : '') + '" type="button" data-act="navmore" aria-haspopup="true" aria-expanded="' + !!ui.navMore + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + NAV_DOTS + '</svg>עוד</button>' +
       (ui.navMore ? '<div class="nav-menu" role="menu">' + more.map(function (n) {
         return '<button class="nav-mi' + (ui.tab === n[0] ? ' on' : '') + '" type="button" role="menuitem" data-act="tab" data-tab="' + n[0] + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + n[2] + '</svg>' + n[1] + '</button>';
-      }).join('') + '</div>' : '');
+      }).join('') + (cloud.fb ? '<div class="nav-sep"></div><button class="nav-mi" type="button" role="menuitem" data-act="accounts"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>החלפת משתמש</button>' : '') + '</div>' : '');
   }
   function closeNavMore() { if (ui.navMore) { ui.navMore = false; renderNav(); } }
   function head(t, s, right) { return '<div class="head"><div><h1 class="title">' + t + '</h1>' + (s ? '<p class="sub">' + s + '</p>' : '') + '</div>' + (right || '') + '</div>'; }
@@ -3725,7 +3791,7 @@ var qrcode = function() {
         '<div class="spec-row"><span>מייל</span><span dir="ltr">' + esc(cloud.email || '') + '</span></div>' +
         '<div class="spec-row"><span>נחשים באוסף</span><span>' + db.snakes.length + '</span></div>' +
         '<div class="spec-row"><span>סנכרון</span><span>' + (cloud.on ? (cloud.error ? 'בעיה, נשמר במכשיר' : 'פעיל') : 'לא מחובר') + '</span></div>' +
-        '<div class="row" style="margin-top:14px"><button class="btn btn-soft" type="button" data-act="fblogout">התנתקות</button></div></div>';
+        '<div class="row" style="margin-top:14px"><button class="btn btn-soft" type="button" data-act="accounts">החלפת משתמש</button><button class="btn btn-soft" type="button" data-act="fblogout">התנתקות</button></div></div>';
       if (location.hash === '#import') h += '<div class="section"><div class="section-head"><h2 class="section-title">טעינת גיבוי</h2></div><div class="row"><button class="btn btn-soft" type="button" data-act="import">טעינת גיבוי</button></div></div>';
     } else if (window.claude) {
       h += '<div class="section"><div class="section-head"><h2 class="section-title">האוסף</h2></div><div class="spec-row"><span>נחשים באוסף</span><span>' + db.snakes.length + '</span></div></div>';
@@ -4337,6 +4403,7 @@ var qrcode = function() {
     else if (ui.sheet.type === 'goal') sh.innerHTML = goalSheetHtml();
     else if (ui.sheet.type === 'shopqr') sh.innerHTML = shopQrSheetHtml();
     else if (ui.sheet.type === 'backups') sh.innerHTML = backupsSheetHtml();
+    else if (ui.sheet.type === 'accounts') sh.innerHTML = accountsSheetHtml();
     else if (ui.sheet.type === 'cert') { if (!s) return closeSheet(); sh.innerHTML = certSheetHtml(s); }
     else if (ui.sheet.type === 'expense') sh.innerHTML = expenseFormHtml();
     else if (ui.sheet.type === 'wait') sh.innerHTML = waitFormHtml();
@@ -5507,7 +5574,10 @@ var qrcode = function() {
         if (confirm('למחוק את האירוע?')) { db.events = db.events.filter(function (x) { return x.id !== id; }); save(); closeSheet(); renderPage(); toast('האירוע נמחק'); }
         break;
       case 'export': exportData(); break;
-      case 'fblogout': (cloud.dirty || cloud.busy ? cloudSync() : Promise.resolve()).catch(function () {}).then(function () { return firebase.auth().signOut(); }); break;
+      case 'fblogout': (cloud.dirty || cloud.busy ? cloudSync() : Promise.resolve()).catch(function () {}).then(function () { accForget(fbApp.name); return fbAuth().signOut(); }); break;
+      case 'accounts': ui.navMore = false; renderNav(); openSheet({ type: 'accounts' }); break;
+      case 'switchacc': switchAccount(id); break;
+      case 'addacc': addAccount(); break;
       case 'import': document.getElementById('importFile').click(); break;
     }
   });
