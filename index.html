@@ -88,6 +88,8 @@
   /* genes: chips */
   .genes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; direction: ltr; justify-content: flex-start; }
   .picked-genes { margin-top: 2px; }
+  /* the picked snakes sit in two narrow columns on a phone: long genes wrap inside their chip instead of running into the other side */
+  .picked-genes .gchip { white-space: normal; flex: 0 1 auto; max-width: 100%; border-radius: 12px; }
   .picked-genes .note { margin-top: 6px; }
   #pg-maleId, #pg-femaleId { margin-bottom: 14px; }
   .gchip { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 3px 10px; font-size: .8rem; font-weight: 600; }
@@ -3995,7 +3997,7 @@ var qrcode = function() {
   // exactly one allele per locus: a listed gene with c copies passes it with chance c/2 (times its certainty p),
   // otherwise the normal allele ("~"). Loci are independent of each other.
   function calcResults() {
-    var detail = !!db.calc.detail, loci = {}, warn = [];
+    var detail = !!db.calc.detail, loci = {}, warn = [], perGene = [];
     [['male', 'm'], ['female', 'f']].forEach(function (pr) {
       db.calc[pr[0]].forEach(function (e) {
         var cx = complexOf(e.name), k = cx ? 'cx:' + cx.id : 'g:' + canon(e.name).toLowerCase(), an = canon(e.name);
@@ -4057,6 +4059,7 @@ var qrcode = function() {
         });
         Object.keys(byLab).forEach(function (lab) { outs.push({ p: byLab[lab], lab: lab }); });
       }
+      perGene.push(outs);
       var next = [];
       combos.forEach(function (c) { outs.forEach(function (o) { next.push({ p: c.p * o.p, parts: o.lab ? c.parts.concat(o.lab) : c.parts }); }); });
       combos = next;
@@ -4069,7 +4072,7 @@ var qrcode = function() {
       var k = parts.length ? parts.join(' × ') : 'Normal'; out[k] = (out[k] || 0) + c.p;
     });
     var res = Object.keys(out).map(function (k) { return { label: k, p: out[k] }; }).filter(function (r) { return r.p > 0.0001; }).sort(function (x, y) { return y.p - x.p; });
-    res.warn = warn;
+    res.warn = warn; res.genes = perGene;
     return res;
   }
   function resultsHtml() {
@@ -4081,9 +4084,19 @@ var qrcode = function() {
     if (res.warn && res.warn.length) notes += '<p class="note" style="color:var(--red)">יש יותר משני עותקים על אותו מקום בגנום אצל: ' + res.warn.map(esc).join(', ') + '. לכל הורה יש רק שני עותקים, ולכן נספרו רק הראשונים.</p>';
     if (/Champagne × Spider|Spider × Champagne|Super Spider|Super Champagne/.test(all)) notes += '<p class="note" style="color:var(--red)">Super Spider, Super Champagne וצירוף Spider × Champagne מדווחים כקטלניים: צאצאים כאלה בדרך כלל אינם שורדים.</p>';
     if (/\((Blue Eyed Leucistic|Ivory|Scaleless)\)/.test(all)) notes += '<p class="note">השם המקובל של צורת ה-Super מופיע בסוגריים.</p>';
-    return '<div class="panel">' + res.slice(0, 24).map(function (r) {
-      return '<div class="result"><div class="r1"><span dir="ltr">' + esc(r.label) + '</span><span class="pct">' + (r.p * 100).toFixed(1).replace(/\.0$/, '') + '%</span></div><div class="bar" style="width:' + Math.max(2, r.p * 100) + '%"></div></div>';
-    }).join('') + (res.length > 24 ? '<p class="note" style="margin-top:10px">מוצגים 24 הצירופים הסבירים ביותר.</p>' : '') + (notes ? '<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">' + notes + '</div>' : '') + '</div>';
+    function row(lab, p) {
+      return '<div class="result"><div class="r1"><span dir="ltr">' + esc(lab) + '</span><span class="pct">' + (p * 100).toFixed(1).replace(/\.0$/, '') + '%</span></div><div class="bar" style="width:' + Math.max(2, p * 100) + '%"></div></div>';
+    }
+    // with several genes there are many combinations, each one rare, so a visual recessive (e.g. Desert Ghost 25%) can sit far
+    // below the rows shown: each gene's own chance comes first, visual forms before Hets
+    var hetRe = /^(\d+% )?Het /, per = res.genes && res.genes.length > 1 ? '<div class="panel" style="margin-bottom:14px"><h3 class="side-title" style="margin-bottom:2px">הסיכוי לכל גן בנפרד</h3><p class="note">הסיכוי של צאצא לקבל את הגן, בלי קשר לשאר הגנים</p>' +
+      res.genes.map(function (outs) {
+        return outs.filter(function (o) { return o.lab; }).sort(function (a, b) { return (hetRe.test(a.lab) ? 1 : 0) - (hetRe.test(b.lab) ? 1 : 0) || b.p - a.p; }).map(function (o) { return row(o.lab, o.p); }).join('');
+      }).join('') + '</div>' : '';
+    var shown = ui.calcAll ? res : res.slice(0, 24);
+    return per + '<div class="panel">' + (per ? '<h3 class="side-title" style="margin-bottom:2px">כל הצירופים</h3>' : '') + shown.map(function (r) { return row(r.label, r.p); }).join('') +
+      (res.length > 24 ? '<p class="note" style="margin-top:10px">' + (ui.calcAll ? 'מוצגים כל ' + res.length + ' הצירופים.' : 'מוצגים 24 הצירופים הסבירים ביותר מתוך ' + res.length + '.') + '</p><button type="button" class="linkbtn" data-act="calcall" style="margin-top:6px">' + (ui.calcAll ? 'להציג רק את 24 הסבירים ביותר' : 'להציג את כל הצירופים') + '</button>' : '') +
+      (notes ? '<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">' + notes + '</div>' : '') + '</div>';
   }
   function modesHtml() {
     var names = [], seen = {};
@@ -5393,6 +5406,7 @@ var qrcode = function() {
     var act = el.dataset.act, id = el.dataset.id;
     switch (act) {
       case 'navmore': ui.navMore = !ui.navMore; renderNav(); break;
+      case 'calcall': ui.calcAll = !ui.calcAll; calcRefresh(); break;
       case 'tab': ui.tab = el.dataset.tab; ui.navMore = false; ui.customer = false; document.body.classList.remove('customer'); hideSug(); renderPage(); window.scrollTo(0, 0); break;
       case 'add': openForm(null); break;
       case 'open': openSheet({ type: 'detail', id: id }); break;
