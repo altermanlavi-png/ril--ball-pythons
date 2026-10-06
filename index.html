@@ -2795,7 +2795,9 @@ var qrcode = function() {
     codom: ['Bamboo', 'Banana', 'Black Head', 'Black Pastel', 'Blade', 'Bongo', 'Butter', 'Champagne', 'Chocolate', 'Cinnamon', 'Copper', 'Cypress', 'Enchi', 'Fire', 'Genetic Banded', 'Ghi', 'Granite', 'Gravel', 'Grim', 'Hidden Gene Woma', 'Highway', 'Honey', 'Hurricane', 'Jolt', 'Jungle Woma', 'Lace', 'Leopard', 'Lesser', 'Lori', 'Mahogany', 'Mario', 'Microscale', 'Mocha', 'Mojave', 'Mystic', 'Mystic Potion', 'Orange Belly', 'Orange Dream', 'Pastel', 'Peach', 'Phantom', 'Puma', 'Raven', 'Red Stripe', 'Redhead', 'Russo', 'Sable', 'Scaleless Head', 'Shredder', 'Spark', 'Special', 'Spider', 'Splatter', 'Spotnose', 'Striker', 'Taronja', 'Trick', 'Twister', 'Vanilla', 'Woma', 'Yellow Belly']
   };
   // different names for the same gene: they are counted as one gene in the calculator
-  var ALIAS = { 'Pied': 'Piebald', 'Ghost': 'Hypo', 'Coral Glow': 'Banana', 'Amelanistic': 'Albino' };
+  var ALIAS = { 'Pied': 'Piebald', 'Ghost': 'Hypo', 'Coral Glow': 'Banana', 'Amelanistic': 'Albino', 'DG': 'Desert Ghost', 'YB': 'Yellow Belly', 'OD': 'Orange Dream' };
+  // short names breeders type: typing "het dg" saves "100% Het Desert Ghost"
+  var ABBR = { 'dg': 'Desert Ghost', 'yb': 'Yellow Belly', 'od': 'Orange Dream' };
   // Allelic complexes: genes that sit on the SAME place in the genome, so a snake carries at most two copies in total
   // and the calculator must treat them as one locus. Sources: Kinova Reptiles "Understanding Allelic Genes in Ball
   // Pythons", ColdBlooded "Allelic Morphs aka Complexes", ReptiDex (members listed by at least two of them);
@@ -2896,10 +2898,21 @@ var qrcode = function() {
   }).catch(function () {});
   // Pied and Piebald are the same gene: only Piebald is offered, and older entries are renamed
   function fixPied(list) { return Array.isArray(list) ? list.map(function (g) { if (typeof g === 'string') return g.replace(/\bPied\b/, 'Piebald'); if (g && typeof g.name === 'string') g.name = g.name.replace(/\bPied\b/, 'Piebald'); return g; }) : list; }
+  // "het dg" used to be saved as a bare "Dg" (the Het was dropped because DG was not recognized): it was typed as a Het,
+  // so it becomes "100% Het Desert Ghost"; a DG with a prefix kept it and only gets the full name
+  function fixDG(list) {
+    return Array.isArray(list) ? list.map(function (g) {
+      if (typeof g === 'string') return /^\s*dg\s*$/i.test(g) ? '100% Het Desert Ghost' : g.replace(/\bdg\s*$/i, 'Desert Ghost');
+      if (g && typeof g.name === 'string' && /^\s*dg\s*$/i.test(g.name)) g.name = 'Desert Ghost';
+      return g;
+    }) : list;
+  }
   function normDb(d) {
     d.snakes = Array.isArray(d.snakes) ? d.snakes : [];
     d.remindFeed = d.remindFeed !== false;
-    d.snakes.forEach(function (s) { if (s) s.genes = fixPied(s.genes); });
+    d.snakes.forEach(function (s) { if (s) s.genes = fixDG(fixPied(s.genes)); });
+    if (Array.isArray(d.customGenes)) d.customGenes = d.customGenes.filter(function (n) { return !/^\s*dg\s*$/i.test(n); });
+    if (d.calc) { d.calc.male = fixDG(d.calc.male); d.calc.female = fixDG(d.calc.female); }
     d.customGenes = fixPied(d.customGenes); d.draftGenes = fixPied(d.draftGenes);
     if (d.calc) { d.calc.male = fixPied(d.calc.male); d.calc.female = fixPied(d.calc.female); }
     d.customGenes = Array.isArray(d.customGenes) ? d.customGenes : [];
@@ -3534,7 +3547,7 @@ var qrcode = function() {
     if (kind === 'super') pos = false;
     return { kind: kind, p: Math.min(1, Math.max(0, p)), rest: m[3], pos: pos && !m[1] };
   }
-  function resolveName(s) { var k = heKey(s); return HE_ALIAS[k] || titleCase(s); }
+  function resolveName(s) { var k = heKey(s); return HE_ALIAS[k] || ABBR[k.toLowerCase()] || titleCase(s); }
   function takenSet(inp) {
     var t = {}, g = inp.dataset.gene;
     if (g === 'filter') ui.geneFilter.forEach(function (n) { t[canon(n).toLowerCase()] = true; });
