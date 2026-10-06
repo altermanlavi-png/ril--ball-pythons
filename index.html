@@ -238,6 +238,11 @@
   .pair-code { font-weight: 500; font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pair-code i { font-style: normal; color: var(--muted); }
   .pair-genes { display: flex; flex-wrap: wrap; gap: 4px; }
+  /* what can come out that the parents do not show (Clown from two Hets, Super, Crypton) */
+  .pair-can { display: block; font-size: .82rem; color: var(--green); line-height: 1.5; }
+  .pair-can b { font-weight: 600; }
+  .pair-can .pc-i { white-space: nowrap; }
+  #pairCan .pair-can { margin: 12px 0 2px; padding: 10px 12px; border-radius: 12px; background: var(--green-soft); }
   .pair-genes .gchip { font-size: .72rem; font-weight: 400; padding: 2px 8px; white-space: normal; flex: 0 1 auto; }
   .pair-genes .gchip.normal { background: none; border: 1px solid var(--line); color: var(--muted); }
   .pair-side .morph { margin-top: 0; font-weight: 500; font-size: .74rem; }
@@ -4063,18 +4068,19 @@ var qrcode = function() {
   // Each gene is one "locus" (its own place in the genome); genes of the same complex share one locus. A parent passes
   // exactly one allele per locus: a listed gene with c copies passes it with chance c/2 (times its certainty p),
   // otherwise the normal allele ("~"). Loci are independent of each other.
-  function calcResults() {
-    var detail = !!db.calc.detail, loci = {}, warn = [], perGene = [];
+  // each gene's own outcomes: [[{ p, lab, two }]], one list per locus. two = the baby has two non-normal copies there
+  // (a recessive visual, a Super, or an allelic combination like Crypton): the forms that neither parent may show
+  function calcLoci(male, female, detail, max) {
+    var loci = {}, warn = [], perGene = [], lists = { male: male, female: female };
     [['male', 'm'], ['female', 'f']].forEach(function (pr) {
-      db.calc[pr[0]].forEach(function (e) {
+      lists[pr[0]].forEach(function (e) {
         var cx = complexOf(e.name), k = cx ? 'cx:' + cx.id : 'g:' + canon(e.name).toLowerCase(), an = canon(e.name);
         var L = loci[k] = loci[k] || { cx: cx, disp: {}, m: [], f: [], name: e.name };
         L.disp[an] = L.disp[an] || e.name;
         L[pr[1]].push({ a: an, c: e.c, p: e.p == null ? 1 : e.p });
       });
     });
-    var combos = [{ p: 1, parts: [] }];
-    Object.keys(loci).slice(0, 8).forEach(function (k) {
+    Object.keys(loci).slice(0, max || 8).forEach(function (k) {
       var L = loci[k], mode = L.cx ? L.cx.mode : modeOf(L.name);
       function gam(list, side) {
         var d = {}, rem = 2, s = 0;
@@ -4100,7 +4106,7 @@ var qrcode = function() {
           if (w === 0) { var lab = ab[0] === ab[1] ? disp(ab[0]) : comboName(L.cx, ab[0], ab[1], disp); vis[lab] = (vis[lab] || 0) + pr; }
           else { non += pr; if (w === 1) { var al = ab[0] === '~' ? ab[1] : ab[0]; carry[al] = (carry[al] || 0) + pr; } }
         });
-        Object.keys(vis).forEach(function (lab) { outs.push({ p: vis[lab], lab: lab }); });
+        Object.keys(vis).forEach(function (lab) { outs.push({ p: vis[lab], lab: lab, two: true }); });
         var carriers = Object.keys(carry);
         if (carriers.length > 1) {
           // two different alleles of one complex (e.g. Het Clown × Het Cryptic): a normal-looking baby carries at most one,
@@ -4115,7 +4121,7 @@ var qrcode = function() {
           }).join(' / ') });
         }
       } else {
-        var byLab = {};
+        var byLab = {}, twoLab = {};
         Object.keys(geno).forEach(function (key) {
           var ab = key.split('|'), pr = geno[key], w = ab.filter(function (z) { return z === '~'; }).length, lab;
           if (w === 2) lab = '';
@@ -4123,10 +4129,17 @@ var qrcode = function() {
           else if (ab[0] === ab[1]) lab = mode === 'recessive' ? disp(ab[0]) : comp(disp(ab[0]), mode, 2, 1, true);
           else lab = comboName(L.cx, ab[0], ab[1], disp);
           byLab[lab] = (byLab[lab] || 0) + pr;
+          if (w === 0 && mode !== 'dominant') twoLab[lab] = true; // a dominant gene looks the same with one copy or two
         });
-        Object.keys(byLab).forEach(function (lab) { outs.push({ p: byLab[lab], lab: lab }); });
+        Object.keys(byLab).forEach(function (lab) { outs.push({ p: byLab[lab], lab: lab, two: !!twoLab[lab] }); });
       }
       perGene.push(outs);
+    });
+    return { genes: perGene, warn: warn };
+  }
+  function calcResults() {
+    var lo = calcLoci(db.calc.male, db.calc.female, !!db.calc.detail), combos = [{ p: 1, parts: [] }];
+    lo.genes.forEach(function (outs) {
       var next = [];
       combos.forEach(function (c) { outs.forEach(function (o) { next.push({ p: c.p * o.p, parts: o.lab ? c.parts.concat(o.lab) : c.parts }); }); });
       combos = next;
@@ -4139,8 +4152,19 @@ var qrcode = function() {
       var k = parts.length ? parts.join(' × ') : 'Normal'; out[k] = (out[k] || 0) + c.p;
     });
     var res = Object.keys(out).map(function (k) { return { label: k, p: out[k] }; }).filter(function (r) { return r.p > 0.0001; }).sort(function (x, y) { return y.p - x.p; });
-    res.warn = warn; res.genes = perGene;
+    res.warn = lo.warn; res.genes = lo.genes;
     return res;
+  }
+  // a pairing's "can come out": the forms that need two copies (Clown from Het × Het, Super Pastel, Crypton...),
+  // because those are the ones you cannot see by looking at the parents. Each with its own chance.
+  function pairCanHtml(m, f) {
+    if (!m || !f) return '';
+    var lo = calcLoci(snakeCalcGenes(m), snakeCalcGenes(f), false, 99), can = [];
+    lo.genes.forEach(function (outs) { outs.forEach(function (o) { if (o.two && o.lab && o.p > 0.0001) can.push(o); }); });
+    if (!can.length) return '';
+    can.sort(function (a, b) { return b.p - a.p; });
+    // each item is its own left-to-right unit, so it reads "Clown 25%" inside the Hebrew line
+    return '<span class="pair-can">יכול לצאת: ' + can.map(function (o) { return '<span class="pc-i" dir="ltr"><b>' + esc(o.lab) + '</b> ' + pctTxt(o.p) + '</span>'; }).join(' · ') + '</span>';
   }
   function resultsHtml() {
     var res = calcResults();
@@ -4647,6 +4671,7 @@ var qrcode = function() {
     return '<button type="button" class="pair-card" data-act="openpair" data-id="' + p.id + '">' +
       '<span class="pair-top"><b>' + esc(pairName(p)) + '</b>' + (p.season ? '<span class="note">' + esc(p.season) + '</span>' : '') + '</span>' +
       '<span class="pair-sides">' + pairSideHtml(snakeById(p.maleId), 'male') + '<span class="pair-x">×</span>' + pairSideHtml(snakeById(p.femaleId), 'female') + '</span>' +
+      pairCanHtml(snakeById(p.maleId), snakeById(p.femaleId)) +
       '<span class="progress">' + PAIR_STEPS.map(function (_, i) { return '<span class="' + (st.i >= i ? 'on' : '') + '"></span>'; }).join('') + '</span>' +
       '<span class="stage ' + st.css + '">' + esc(st.label + (st.date ? ' · ' + fmtDate(st.date) : '')) + '</span>' +
       (eh ? '<span class="note">יום ' + incDay(p) + ' מתוך ' + incDays(p) + ' · צפי בקיעה: ' + fmtDate(eh) + (left >= 0 ? ' · בעוד ' + left + ' ימים' : ' · עבר לפני ' + (-left) + ' ימים') + '</span>' +
@@ -4793,6 +4818,7 @@ var qrcode = function() {
     h += '<form id="pairForm" data-pid="' + (p ? p.id : '') + '" autocomplete="off">' +
       '<div class="grid2"><div><label class="field" style="margin-bottom:0">זכר ♂<select name="maleId" required>' + opts('male', p ? p.maleId : pre.maleId) + '</select></label><div id="pg-maleId">' + pickedGenesHtml(snakeById(p ? p.maleId : pre.maleId)) + '</div></div>' +
       '<div><label class="field" style="margin-bottom:0">נקבה ♀<select name="femaleId" required>' + opts('female', p ? p.femaleId : pre.femaleId) + '</select></label><div id="pg-femaleId">' + pickedGenesHtml(snakeById(p ? p.femaleId : pre.femaleId)) + '</div></div></div>' +
+      '<div id="pairCan">' + pairCanHtml(snakeById(p ? p.maleId : pre.maleId), snakeById(p ? p.femaleId : pre.femaleId)) + '</div>' +
       '<div class="grid2"><label class="field">עונה<input type="text" name="season" maxlength="20" value="' + (p ? v('season') : new Date().getFullYear()) + '"></label>' +
       '<label class="field">ימי דגירה<input type="number" name="incubation" min="30" max="120" inputmode="numeric" value="' + (p && p.incubation ? v('incubation') : 58) + '"><span class="hint">בדרך כלל 55–60</span></label></div>' +
       '<p class="group-label">תאריכי זיווג</p><div id="lockList">' + (p && pairLocks(p).length ? pairLocks(p) : ['']).map(lockRowHtml).join('') + '</div>' +
@@ -5648,6 +5674,7 @@ var qrcode = function() {
     // pairing form: show the picked snake's genetics under the picker
     if (t.form && t.form.id === 'pairForm' && (t.name === 'maleId' || t.name === 'femaleId')) {
       var pg = document.getElementById('pg-' + t.name); if (pg) pg.innerHTML = pickedGenesHtml(snakeById(t.value));
+      var pc = document.getElementById('pairCan'); if (pc) pc.innerHTML = pairCanHtml(snakeById(t.form.maleId.value), snakeById(t.form.femaleId.value));
       return;
     }
     if (t.id === 'photoFile' && t.files.length) {
