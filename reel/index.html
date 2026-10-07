@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>RIL Ball Pythons · סטודיו סרטונים</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" sizes="192x192" href="../icon-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: dark; --bg: #000; --surface: #0e0e0e; --surface2: #181818; --line: #2a2a2a; --text: #F5F5F5; --muted: #ababab; --amber: #E3A83B; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 400 16px/1.5 'Rubik', -apple-system, 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: calc(18px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 14px; padding: 8px 0 18px; }
+  header img { width: 84px; height: auto; mix-blend-mode: screen; flex: none; }
+  h1 { margin: 0; font: 900 1.8rem/1.1 'Frank Ruhl Libre', Georgia, serif; }
+  .sub { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+  .layout { display: grid; gap: 22px; }
+  @media (min-width: 820px) { .layout { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; } .stage { position: sticky; top: 16px; } }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .frame { position: relative; width: min(100%, calc(68vh * var(--ar, .5625))); border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+  .frame canvas { display: block; width: 100%; height: auto; }
+  .play { position: absolute; inset: 0; margin: auto; width: 74px; height: 74px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.55); font-size: 1.6rem; padding-inline-start: 6px; }
+  .play.on { opacity: 0; }
+  .play.on:hover { opacity: 1; }
+  .dur { color: var(--muted); font-size: .85rem; }
+  section { background: rgba(14,14,14,.92); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+  h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 700; }
+  h2 span { color: var(--muted); font-weight: 400; font-size: .85rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); background: var(--surface2); color: var(--muted); border-radius: 999px; padding: 7px 14px; font-size: .88rem; }
+  .chip.on { background: var(--text); border-color: var(--text); color: #000; font-weight: 700; }
+  label { display: block; color: var(--muted); font-size: .82rem; margin: 10px 0 4px; }
+  label:first-of-type { margin-top: 0; }
+  input[type=text] { width: 100%; background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: var(--text); }
+  input[type=text]:focus { outline: none; border-color: var(--amber); }
+  .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .hint { color: var(--muted); font-size: .82rem; margin: 8px 0 0; }
+  .soft { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface2); border-radius: 10px; padding: 9px 14px; font-weight: 600; }
+  .pics { display: grid; gap: 8px; margin-top: 10px; }
+  .pic { display: flex; align-items: center; gap: 8px; }
+  .pic img { width: 54px; height: 54px; object-fit: cover; border-radius: 10px; flex: none; }
+  .x { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface2); }
+  .song { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--muted); font-size: .9rem; }
+  .song span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .go { display: block; width: 100%; padding: 15px; border: 0; border-radius: 14px; background: var(--amber); color: #111; font-weight: 800; font-size: 1.1rem; }
+  .go:disabled { opacity: .55; cursor: default; }
+  .prog { margin-top: 12px; }
+  .bar { height: 8px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--amber); }
+  .prog p { margin: 6px 0 0; color: var(--muted); font-size: .85rem; text-align: center; }
+  .result { margin-top: 14px; }
+  .result video { display: block; width: 100%; max-height: 60vh; border-radius: 12px; background: #000; }
+  .btns { display: flex; gap: 8px; margin-top: 10px; }
+  .btns > * { flex: 1; text-align: center; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 700; }
+  .save { background: var(--text); color: #000; }
+  .share { border: 1px solid var(--line); background: var(--surface2); }
+  .warn { color: var(--amber); font-size: .85rem; margin: 8px 0 0; }
+  body.shot { overflow: hidden; }
+  body.shot canvas { position: fixed; top: 0; left: 0; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header><img src="../genetics/logo.jpg" alt="RIL Ball Pythons"><div><h1>סטודיו סרטונים</h1><p class="sub">סרטון היכרות עם הלוגו של RIL, מוכן לרילס, לסטורי ולוואטסאפ</p></div></header>
+  <div class="layout">
+    <div class="stage">
+      <div class="frame" id="frame"><canvas id="cv" width="1080" height="1920"></canvas><button class="play" id="playbtn" type="button" aria-label="תצוגה מקדימה">▶</button></div>
+      <div class="dur" id="dur"></div>
+    </div>
+    <div>
+      <section><h2>גודל</h2><div class="chips" id="fmts"></div></section>
+      <section>
+        <h2>טקסטים</h2>
+        <label for="t-h1">כותרת (שתי שורות)</label>
+        <div class="row3" style="grid-template-columns:1fr 1fr"><input type="text" id="t-h1" data-k="h1" data-scene="title"><input type="text" data-k="h2" data-scene="title" aria-label="שורה שנייה"></div>
+        <label for="t-pill">מתחת לכותרת</label>
+        <input type="text" id="t-pill" data-k="pill" data-scene="title">
+        <label for="t-w1">שלוש מילים</label>
+        <div class="row3"><input type="text" id="t-w1" data-k="w1" data-scene="words"><input type="text" data-k="w2" data-scene="words" aria-label="מילה שנייה"><input type="text" data-k="w3" data-scene="words" aria-label="מילה שלישית"></div>
+        <label for="t-tag">שורה קטנה אחרי המילים</label>
+        <input type="text" id="t-tag" data-k="tag" data-scene="words">
+        <label for="t-cta">כפתור בסוף</label>
+        <input type="text" id="t-cta" data-k="cta" data-scene="outro">
+        <label for="t-contact">שם באינסטגרם או טלפון (לא חובה)</label>
+        <input type="text" id="t-contact" data-k="contact" data-scene="outro" dir="auto" placeholder="מופיע מתחת לכפתור">
+        <p class="hint">שדה ריק לא יופיע בסרטון.</p>
+      </section>
+      <section>
+        <h2>תמונות של נחשים <span>(לא חובה)</span></h2>
+        <button class="soft" type="button" id="addpic">+ הוספת תמונות</button>
+        <input type="file" id="picfile" accept="image/*" multiple hidden>
+        <div class="pics" id="pics"></div>
+        <p class="hint">כל תמונה מקבלת כ־3 שניות עם הלוגו למעלה. אפשר לכתוב מתחתיה שם, מורף או מחיר.</p>
+      </section>
+      <section>
+        <h2>מוזיקה <span>(לא חובה)</span></h2>
+        <button class="soft" type="button" id="addsong">♪ בחירת שיר מהמכשיר</button>
+        <input type="file" id="songfile" accept="audio/*" hidden>
+        <div class="song" id="song" hidden><span id="songname"></span><button class="x" type="button" id="delsong" aria-label="הסרת השיר">✕</button></div>
+        <p class="hint">אפשר גם בלי: באינסטגרם ובטיקטוק מוסיפים מוזיקה בזמן ההעלאה.</p>
+      </section>
+      <button class="go" type="button" id="go">יצירת סרטון</button>
+      <div class="prog" id="prog" hidden><div class="bar"><i id="barfill"></i></div><p id="progtxt">מכין…</p></div>
+      <div class="result" id="result" hidden>
+        <video id="out" controls playsinline></video>
+        <div class="btns"><a class="save" id="save" href="#">שמירה</a><button class="share" type="button" id="share" hidden>שיתוף</button></div>
+        <p class="warn" id="webmwarn" hidden>הדפדפן הזה שומר רק בפורמט WebM, ואינסטגרם לא תמיד מקבל אותו. בכרום או בספארי מעודכנים יוצא MP4.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var GOLD = '#E3A83B', OV = 0.45, KEY = 'ril.reel.v1';
+  var FMTS = { story: [1080, 1920, 'רילס / סטורי', '9:16'], square: [1080, 1080, 'פוסט', '1:1'], wide: [1920, 1080, 'יוטיוב', '16:9'] };
+  var DEF = { h1: 'פיתונים', h2: 'מתכדרים', pill: 'זמינים עכשיו לקנייה', w1: 'תמונות.', w2: 'גנטיקה.', w3: 'מחירים.', tag: 'הכל במקום אחד', cta: 'שלחו הודעה לפרטים', contact: '' };
+  var T = Object.assign({}, DEF), fmt = 'story', photos = [], music = null;
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) { Object.assign(T, saved.T || {}); if (FMTS[saved.fmt]) fmt = saved.fmt; } } catch (e) {}
+  var q = new URLSearchParams(location.search);
+  if (FMTS[q.get('fmt')]) fmt = q.get('fmt');
+
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d'), W, H, u, scenes = [], total = 0, A = {};
+  var FR = "'Frank Ruhl Libre', Georgia, serif", RB = "Rubik, Arial, sans-serif";
+
+  // ---------- small helpers ----------
+  function clamp(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function seg(t, a, b) { return clamp((t - a) / (b - a)); }
+  function eo(x) { x = clamp(x); return 1 - Math.pow(1 - x, 3); }
+  function eio(x) { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+  function eob(x) { x = clamp(x); var c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+  function rng(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; var t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function CY() { return fmt === 'story' ? H * 0.46 : H * 0.5; }
+  function LW() { return Math.min(W * 0.74, H * 0.52 / (A.logo.height / A.logo.width)); }
+  function font(w, size, fam) { ctx.font = w + ' ' + size + 'px ' + fam; }
+  function fit(text, w, size, fam, maxW) { font(w, size, fam); var m = ctx.measureText(text).width; if (m > maxW) { size *= maxW / m; font(w, size, fam); } return size; }
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  // the first Hebrew or Latin letter decides the direction, so "@name" and "Pastel Clown · 1,500 ₪" stay in order
+  function dirOf(s) { var m = /[A-Za-z֐-׿]/.exec(s); return m && /[A-Za-z]/.test(m[0]) ? 'ltr' : 'rtl'; }
+  function txt(s, x, y, color, a) { ctx.globalAlpha = a; ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = dirOf(s); ctx.fillText(s, x, y); }
+
+  // ---------- assets: the logo as white-on-transparent, a gold glow and a soft copy for the background ----------
+  function loadImg(src) { return new Promise(function (ok, bad) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = bad; i.src = src; }); }
+  function canvas(w, h) { var c = document.createElement('canvas'); c.width = Math.round(w); c.height = Math.round(h); return c; }
+  function prepLogo(img) {
+    var c = canvas(img.naturalWidth, img.naturalHeight), x = c.getContext('2d');
+    x.drawImage(img, 0, 0);
+    var d = x.getImageData(0, 0, c.width, c.height), p = d.data;
+    for (var i = 0; i < p.length; i += 4) {
+      var l = Math.max(p[i], p[i + 1], p[i + 2]);
+      p[i] = p[i + 1] = p[i + 2] = 255; p[i + 3] = clamp((l - 20) / 210) * 255;
+    }
+    x.putImageData(d, 0, 0);
+    A.logo = c;
+    A.shine = canvas(c.width, c.height);
+    A.glow = blurred(c, 300, 9, GOLD);
+    A.soft = blurred(c, 170, 6, '');
+  }
+  // blurred once in JS at load (ctx.filter is missing on Safari); small copies, so it stays soft when stretched
+  function blurred(src, w, r, tint) {
+    var h = w * src.height / src.width, pad = r * 4, c = canvas(w + pad * 2, h + pad * 2), x = c.getContext('2d');
+    x.drawImage(src, pad, pad, w, h);
+    if (tint) { x.globalCompositeOperation = 'source-in'; x.fillStyle = tint; x.fillRect(0, 0, c.width, c.height); }
+    var d = x.getImageData(0, 0, c.width, c.height), p = d.data, W2 = c.width, H2 = c.height, a = new Float32Array(W2 * H2), b = new Float32Array(W2 * H2);
+    for (var i = 0; i < a.length; i++) a[i] = p[i * 4 + 3];
+    for (var n = 0; n < 3; n++) { box(a, b, W2, H2, r, 1, W2); box(b, a, H2, W2, r, W2, 1); }
+    // every pixel gets the tint's color: see-through pixels are black, and blurring them in would leave a dark rim
+    var rgb = tint ? [parseInt(tint.substr(1, 2), 16), parseInt(tint.substr(3, 2), 16), parseInt(tint.substr(5, 2), 16)] : [255, 255, 255];
+    for (i = 0; i < a.length; i++) { p[i * 4] = rgb[0]; p[i * 4 + 1] = rgb[1]; p[i * 4 + 2] = rgb[2]; p[i * 4 + 3] = a[i]; }
+    x.putImageData(d, 0, 0);
+    return { c: c, pad: pad / w }; // pad as a share of the logo width
+  }
+  // running-sum box blur along rows (step 1) or columns (step = width)
+  function box(s, d, len, lines, r, step, lineStep) {
+    var k = 1 / (2 * r + 1);
+    for (var L = 0; L < lines; L++) {
+      var o = L * lineStep, acc = 0, i;
+      for (i = -r; i <= r; i++) acc += s[o + Math.min(len - 1, Math.max(0, i)) * step];
+      for (i = 0; i < len; i++) { d[o + i * step] = acc * k; acc += s[o + Math.min(len - 1, i + r + 1) * step] - s[o + Math.max(0, i - r) * step]; }
+    }
+  }
+  // draw a blurred copy so its logo part covers the box (x, y, w, h)
+  function drawBlur(B, x, y, w, h) { var p = B.pad * w; ctx.drawImage(B.c, x - p, y - p, w + p * 2, h + p * 2); }
+  var dust = [];
+  (function () { var r = rng(11); for (var i = 0; i < 48; i++) dust.push({ x: r(), y: r(), v: .01 + r() * .03, s: 1.2 + r() * 3.4, a: .12 + r() * .45, tw: .6 + r() * 1.8, ph: r() * 6.28, dx: (r() - .5) * .03 }); })();
+
+  // ---------- drawing ----------
+  function drawLogo(cx, cy, w, a, sh, gl) {
+    var L = A.logo, h = w * L.height / L.width, x = cx - w / 2, y = cy - h / 2, src = L;
+    if (gl > 0) { ctx.globalAlpha = clamp(a * gl); drawBlur(A.glow, x - w * .02, y - h * .02, w * 1.04, h * 1.04); }
+    if (sh > 0 && sh < 1) { // a gold light sweeps across the white parts, right to left
+      var c = A.shine, g = c.getContext('2d'), bw = c.width * .38, px = c.width * 1.25 - sh * (c.width * 1.5 + bw);
+      g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, c.width, c.height); g.drawImage(L, 0, 0);
+      g.globalCompositeOperation = 'source-atop';
+      var gr = g.createLinearGradient(px, 0, px + bw, c.height * .45);
+      gr.addColorStop(0, 'rgba(227,168,59,0)'); gr.addColorStop(.42, 'rgba(227,168,59,.9)'); gr.addColorStop(.5, 'rgba(255,238,196,1)'); gr.addColorStop(.58, 'rgba(227,168,59,.9)'); gr.addColorStop(1, 'rgba(227,168,59,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+      src = c;
+    }
+    ctx.globalAlpha = clamp(a); ctx.drawImage(src, x, y, w, h);
+    return { top: y, bottom: y + h };
+  }
+  function background(t) {
+    ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    var cy = CY(), R = Math.max(W, H) * .75, g = ctx.createRadialGradient(W / 2, cy, 0, W / 2, cy, R);
+    g.addColorStop(0, 'rgba(58,42,14,.6)'); g.addColorStop(.45, 'rgba(22,16,6,.4)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    var ar = A.logo.height / A.logo.width, bw = Math.min(W * 1.1, H * .9 / ar) * (1.02 + .04 * Math.sin(t * .35)), bh = bw * ar;
+    ctx.imageSmoothingQuality = 'high'; ctx.globalAlpha = .13; drawBlur(A.soft, (W - bw) / 2, cy - bh / 2, bw, bh);
+    ctx.fillStyle = GOLD;
+    dust.forEach(function (p) {
+      var y = (((p.y - t * p.v) % 1) + 1) % 1 * H, x = (p.x + Math.sin(t * .5 + p.ph) * p.dx) * W;
+      ctx.globalAlpha = p.a * (.55 + .45 * Math.sin(t * p.tw + p.ph));
+      ctx.beginPath(); ctx.arc(x, y, p.s * u, 0, 6.2832); ctx.fill();
+    });
+  }
+  function pill(text, cy, a, sc, filled) {
+    if (!text || a <= 0) return;
+    var size = fit(text, filled ? 700 : 600, 54 * u, RB, W * .8), tw = ctx.measureText(text).width, pw = tw + 96 * u, ph = size * 1.95;
+    ctx.save(); ctx.translate(W / 2, cy); ctx.scale(sc, sc); ctx.globalAlpha = clamp(a);
+    rr(-pw / 2, -ph / 2, pw, ph, ph / 2);
+    if (filled) { ctx.fillStyle = GOLD; ctx.fill(); txt(text, 0, size * .04, '#111', clamp(a)); }
+    else { ctx.fillStyle = 'rgba(227,168,59,.12)'; ctx.fill(); ctx.lineWidth = 3 * u; ctx.strokeStyle = GOLD; ctx.stroke(); txt(text, 0, size * .04, '#fff', clamp(a)); }
+    ctx.restore();
+  }
+  var SCENE = {
+    intro: function (lt, sc, a) {
+      var cy = CY(), e = eo(seg(lt, .15, 1.5)), w = LW() * (1.14 - .14 * e);
+      var r = drawLogo(W / 2, cy, w, a * e, seg(lt, 1.35, 2.35), .55 * eo(seg(lt, .6, 1.7)) * (.85 + .15 * Math.sin(lt * 3)));
+      var lw = 440 * u * eio(seg(lt, 1.2, 2.0));
+      if (lw > 1) { ctx.globalAlpha = a; ctx.fillStyle = GOLD; ctx.fillRect(W / 2 - lw / 2, r.bottom + 64 * u, lw, 4 * u); }
+    },
+    title: function (lt, sc, a) {
+      var cy = CY(), z = 1 + .03 * (lt / sc.d);
+      ctx.translate(W / 2, cy); ctx.scale(z, z); ctx.translate(-W / 2, -cy);
+      var e0 = eo(seg(lt, 0, .6)), e1 = eo(seg(lt, .15, .85)), e2 = eo(seg(lt, .35, 1.05)), e3 = eob(seg(lt, .85, 1.45));
+      font(600, 36 * u, RB); if ('letterSpacing' in ctx) ctx.letterSpacing = Math.round(12 * u) + 'px';
+      txt('RIL BALL PYTHONS', W / 2, cy - 300 * u, GOLD, a * e0);
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+      if (T.h1) { fit(T.h1, 900, 190 * u, FR, W * .86); txt(T.h1, W / 2, cy - 105 * u + (1 - e1) * 60 * u, '#fff', a * e1); }
+      if (T.h2) { fit(T.h2, 900, 190 * u, FR, W * .86); txt(T.h2, W / 2, cy + 95 * u + (1 - e2) * 60 * u, '#fff', a * e2); }
+      pill(T.pill, cy + 300 * u, a * clamp(e3 * 1.6), .88 + .12 * e3, false);
+    },
+    words: function (lt, sc, a) {
+      var cy = CY();
+      [T.w1, T.w2, T.w3].forEach(function (w, i) {
+        if (!w) return;
+        var e = eo(seg(lt, .15 + i * .5, .75 + i * .5)), y = cy - 230 * u + i * 190 * u, x = W / 2 + (1 - e) * 80 * u;
+        fit(w, 900, 150 * u, FR, W * .84); var tw = ctx.measureText(w).width;
+        txt(w, x, y, '#fff', a * e);
+        var ul = tw * eo(seg(lt, .5 + i * .5, 1.05 + i * .5));
+        if (ul > 1) { ctx.globalAlpha = a; ctx.fillStyle = GOLD; ctx.fillRect(x + tw / 2 - ul, y + 80 * u, ul, 7 * u); }
+      });
+      if (T.tag) { var e = eo(seg(lt, 1.9, 2.5)); fit(T.tag, 500, 50 * u, RB, W * .84); txt(T.tag, W / 2, cy + 370 * u + (1 - e) * 30 * u, '#d4d4d4', a * e); }
+    },
+    photo: function (lt, sc, a) {
+      var img = sc.p.img, k = lt / sc.d, z = 1.04 + .08 * k, dir = sc.i % 2 ? 1 : -1;
+      var s = Math.max(W / img.width, H / img.height) * z, w = img.width * s, h = img.height * s;
+      ctx.globalAlpha = a; ctx.drawImage(img, (W - w) / 2 + dir * (k - .5) * W * .04, (H - h) / 2, w, h);
+      var g = ctx.createLinearGradient(0, H * .5, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.88)');
+      ctx.fillStyle = g; ctx.fillRect(0, H * .5, W, H * .5);
+      g = ctx.createLinearGradient(0, 0, 0, H * .25); g.addColorStop(0, 'rgba(0,0,0,.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * .25);
+      drawLogo(W / 2, fmt === 'story' ? H * .12 : H * .13, 250 * u, a * .95, 0, 0);
+      if (sc.p.cap) {
+        var e = eo(seg(lt, .3, .9));
+        fit(sc.p.cap, 700, 66 * u, RB, W * .86);
+        ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 18 * u;
+        txt(sc.p.cap, W / 2, (fmt === 'story' ? H * .75 : H * .83) + (1 - e) * 40 * u, '#fff', a * e);
+        ctx.shadowBlur = 0;
+      }
+    },
+    outro: function (lt, sc, a) {
+      var cy = CY(), e = eo(seg(lt, 0, .9)), w = LW() * .7 * (1.08 - .08 * e);
+      var r = drawLogo(W / 2, cy - 170 * u, w, a * e, seg(lt, 1.0, 1.9), .45 * e);
+      var e2 = eob(seg(lt, .6, 1.2));
+      pill(T.cta, r.bottom + 120 * u, a * clamp(e2 * 1.6), .85 + .15 * e2, true);
+      if (T.contact) { var e3 = eo(seg(lt, .95, 1.5)); fit(T.contact, 500, 48 * u, RB, W * .84); txt(T.contact, W / 2, r.bottom + (T.cta ? 240 : 120) * u, '#fff', a * e3); }
+    }
+  };
+  function build() {
+    var f = FMTS[fmt]; W = f[0]; H = f[1]; u = Math.min(W, H) / 1080;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    document.getElementById('frame').style.setProperty('--ar', W / H);
+    var sc = [{ k: 'intro', d: 3.6 }];
+    if (T.h1 || T.h2 || T.pill) sc.push({ k: 'title', d: 3.3 });
+    if (T.w1 || T.w2 || T.w3 || T.tag) sc.push({ k: 'words', d: 3.8 });
+    photos.forEach(function (p, i) { sc.push({ k: 'photo', d: 2.9, p: p, i: i }); });
+    sc.push({ k: 'outro', d: 4.2 });
+    var s = 0; sc.forEach(function (x) { x.s = s; s += x.d - OV; });
+    scenes = sc; total = s + OV;
+    document.getElementById('dur').textContent = 'אורך הסרטון: ' + Math.round(total) + ' שניות';
+  }
+  function draw(t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0;
+    background(t);
+    scenes.forEach(function (sc, i) {
+      var lt = t - sc.s; if (lt < 0 || lt > sc.d) return;
+      var a = 1;
+      if (i > 0) a = Math.min(a, clamp(lt / OV));
+      if (i < scenes.length - 1) a = Math.min(a, clamp((sc.d - lt) / OV));
+      if (a <= 0) return;
+      ctx.save(); SCENE[sc.k](lt, sc, a); ctx.restore();
+    });
+    ctx.globalAlpha = 1; ctx.fillStyle = GOLD; ctx.fillRect(0, H - 10 * u, W, 10 * u);
+  }
+
+  // ---------- preview / playback ----------
+  var playing = null, still = 2.7, busy = false;
+  function stillFrame() { if (!playing) draw(Math.min(still, total - .01)); }
+  function stopPlay() { if (playing) { cancelAnimationFrame(playing.raf); if (playing.audio) try { playing.audio.stop(); } catch (e) {} playing = null; } setPlayBtn(); }
+  function play(onEnd, onTick) {
+    stopPlay();
+    var t0 = null, me = playing = { onEnd: onEnd };
+    function step(now) {
+      if (playing !== me) return;
+      if (t0 === null) t0 = now;
+      var t = (now - t0) / 1000;
+      if (onTick) onTick(t);
+      if (t >= total) { draw(total - .001); playing = null; setPlayBtn(); if (onEnd) onEnd(); return; }
+      draw(t); me.raf = requestAnimationFrame(step);
+    }
+    me.raf = requestAnimationFrame(step);
+    setPlayBtn();
+    return me;
+  }
+  function setPlayBtn() { var b = document.getElementById('playbtn'); b.classList.toggle('on', !!playing); b.textContent = playing ? '■' : '▶'; b.style.paddingInlineStart = playing ? '0' : ''; }
+  document.getElementById('playbtn').onclick = function () {
+    if (busy) return;
+    if (playing) { stopPlay(); stillFrame(); return; }
+    var me = play(function () { setTimeout(stillFrame, 900); });
+    if (music) { try { var ac = audioCtx(), s = ac.createBufferSource(); s.buffer = music.buf; s.connect(ac.destination); s.start(); me.audio = s; } catch (e) {} }
+  };
+  var AC = null;
+  function audioCtx() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; }
+
+  // ---------- recording ----------
+  function pickMime() {
+    if (!window.MediaRecorder) return null;
+    var l = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1.42E01F,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    for (var i = 0; i < l.length; i++) if (MediaRecorder.isTypeSupported(l[i])) return l[i];
+    return '';
+  }
+  var lastUrl = null;
+  async function makeVideo() {
+    if (busy) return;
+    var mime = pickMime();
+    if (mime === null || !cv.captureStream) { alert('הדפדפן הזה לא יודע להקליט סרטון. נסו בכרום או בספארי מעודכנים.'); return; }
+    busy = true; stopPlay();
+    var go = document.getElementById('go'), prog = document.getElementById('prog'), fill = document.getElementById('barfill'), ptxt = document.getElementById('progtxt');
+    go.disabled = true; prog.hidden = false; document.getElementById('result').hidden = true;
+    ptxt.textContent = 'מקליט… השאירו את המסך פתוח עד הסוף'; fill.style.width = '0';
+    await ready;
+    draw(0);
+    var stream = cv.captureStream(30), src = null, lock = null;
+    if (music) {
+      var ac = audioCtx(), dest = ac.createMediaStreamDestination(), g = ac.createGain(), now = ac.currentTime;
+      src = ac.createBufferSource(); src.buffer = music.buf; src.connect(g); g.connect(dest); g.connect(ac.destination);
+      g.gain.setValueAtTime(1, now); g.gain.setValueAtTime(1, now + Math.max(0, total - 1.4)); g.gain.linearRampToValueAtTime(0, now + total);
+      stream.addTrack(dest.stream.getAudioTracks()[0]);
+    }
+    var opts = { videoBitsPerSecond: 12000000, audioBitsPerSecond: 192000 }; if (mime) opts.mimeType = mime;
+    var rec = new MediaRecorder(stream, opts), chunks = [];
+    rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+    var stopped = new Promise(function (r) { rec.onstop = r; });
+    try { lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+    rec.start(250);
+    if (src) src.start();
+    await new Promise(function (r) { play(r, function (t) { fill.style.width = Math.min(100, t / total * 100) + '%'; }); });
+    await sleep(300);
+    rec.stop(); await stopped;
+    stream.getTracks().forEach(function (tr) { tr.stop(); });
+    if (lock) try { lock.release(); } catch (e) {}
+    var type = (rec.mimeType || mime || 'video/webm').split(';')[0], ext = /mp4/.test(type) ? 'mp4' : 'webm';
+    var blob = new Blob(chunks, { type: type }), name = 'RIL-Ball-Pythons-' + fmt + '.' + ext;
+    if (lastUrl) URL.revokeObjectURL(lastUrl);
+    lastUrl = URL.createObjectURL(blob);
+    var out = document.getElementById('out'), save = document.getElementById('save'), share = document.getElementById('share');
+    out.src = lastUrl; save.href = lastUrl; save.download = name;
+    var file = new File([blob], name, { type: type });
+    share.hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
+    share.onclick = function () { navigator.share({ files: [file], title: 'RIL Ball Pythons' }).catch(function () {}); };
+    document.getElementById('webmwarn').hidden = ext === 'mp4';
+    prog.hidden = true; go.disabled = false; document.getElementById('result').hidden = false; busy = false;
+    stillFrame();
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return save;
+  }
+  document.getElementById('go').onclick = makeVideo;
+
+  // ---------- controls ----------
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify({ T: T, fmt: fmt })); } catch (e) {} }
+  function showScene(k) { var s = scenes.filter(function (x) { return x.k === k; })[0]; if (s) still = s.s + Math.min(s.d - OV - .05, k === 'intro' ? 2.7 : 2.4); stillFrame(); }
+  function renderFmts() {
+    document.getElementById('fmts').innerHTML = Object.keys(FMTS).map(function (k) { return '<button class="chip' + (k === fmt ? ' on' : '') + '" type="button" data-f="' + k + '">' + FMTS[k][2] + ' · ' + FMTS[k][3] + '</button>'; }).join('');
+  }
+  document.getElementById('fmts').onclick = function (e) {
+    var b = e.target.closest('[data-f]'); if (!b || busy) return;
+    fmt = b.dataset.f; persist(); renderFmts(); stopPlay(); build(); stillFrame();
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('input[data-k]'), function (inp) {
+    inp.value = T[inp.dataset.k] || '';
+    inp.addEventListener('input', function () { T[inp.dataset.k] = inp.value.trim(); persist(); if (busy) return; stopPlay(); build(); showScene(inp.dataset.scene); });
+    inp.addEventListener('focus', function () { if (!busy && !playing) showScene(inp.dataset.scene); });
+  });
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function renderPics() {
+    document.getElementById('pics').innerHTML = photos.map(function (p, i) {
+      return '<div class="pic"><img src="' + p.thumb + '" alt=""><input type="text" dir="auto" data-cap="' + i + '" value="' + esc(p.cap) + '" placeholder="כיתוב (לא חובה)"><button class="x" type="button" data-del="' + i + '" aria-label="הסרת התמונה">✕</button></div>';
+    }).join('');
+  }
+  document.getElementById('pics').addEventListener('input', function (e) { var i = e.target.dataset.cap; if (i == null) return; photos[+i].cap = e.target.value.trim(); if (!busy) { stopPlay(); still = scenes.filter(function (x) { return x.p === photos[+i]; })[0].s + 1.6; stillFrame(); } });
+  document.getElementById('pics').addEventListener('click', function (e) { var b = e.target.closest('[data-del]'); if (!b || busy) return; photos.splice(+b.dataset.del, 1); renderPics(); stopPlay(); build(); stillFrame(); });
+  document.getElementById('addpic').onclick = function () { if (!busy) document.getElementById('picfile').click(); };
+  document.getElementById('picfile').onchange = async function () {
+    var files = Array.prototype.slice.call(this.files || []); this.value = '';
+    for (var i = 0; i < files.length; i++) {
+      var url = URL.createObjectURL(files[i]);
+      try {
+        var img = await loadImg(url), k = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight)); // big phone photos are shrunk so playback stays smooth
+        var c = canvas(img.naturalWidth * k, img.naturalHeight * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        var th = canvas(108, 108), tx = th.getContext('2d'), s = Math.max(108 / c.width, 108 / c.height);
+        tx.drawImage(c, (108 - c.width * s) / 2, (108 - c.height * s) / 2, c.width * s, c.height * s);
+        photos.push({ img: c, thumb: th.toDataURL('image/jpeg', .8), cap: '' });
+      } catch (e) {}
+      URL.revokeObjectURL(url);
+    }
+    renderPics(); stopPlay(); build();
+    if (photos.length) { still = scenes.filter(function (x) { return x.k === 'photo'; }).pop().s + 1.6; }
+    stillFrame();
+  };
+  document.getElementById('addsong').onclick = function () { if (!busy) document.getElementById('songfile').click(); };
+  document.getElementById('songfile').onchange = async function () {
+    var f = this.files && this.files[0]; this.value = ''; if (!f) return;
+    try { var buf = await audioCtx().decodeAudioData(await f.arrayBuffer()); music = { buf: buf, name: f.name }; }
+    catch (e) { alert('לא הצלחתי לקרוא את השיר הזה. נסו קובץ MP3 אחר.'); return; }
+    document.getElementById('songname').textContent = '♪ ' + f.name; document.getElementById('song').hidden = false;
+  };
+  document.getElementById('delsong').onclick = function () { music = null; document.getElementById('song').hidden = true; };
+
+  // ---------- start: fonts and logo first, so the first frame is already right ----------
+  function fontsReady() {
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    var he = 'פיתונים מתכדרים אבגדהוזחטיכלמנסעפצקרשת';
+    return Promise.race([Promise.all([
+      document.fonts.load('900 100px "Frank Ruhl Libre"', he), document.fonts.load('900 100px "Frank Ruhl Libre"', 'RIL'),
+      document.fonts.load('500 50px Rubik', he), document.fonts.load('600 50px Rubik', he + ' RIL BALL'), document.fonts.load('700 50px Rubik', he)
+    ]), sleep(5000)]).catch(function () {});
+  }
+  var ready = Promise.all([loadImg('../genetics/logo.jpg').then(prepLogo), fontsReady()]).then(function () {
+    renderFmts(); build();
+    var fr = parseFloat(q.get('frame'));
+    if (!isNaN(fr)) { document.getElementById('app').hidden = true; document.body.classList.add('shot'); document.body.appendChild(cv); cv.style.width = W + 'px'; draw(fr); document.title = 'ready'; return; }
+    stillFrame();
+  });
+  ready.then(function () {
+    if (q.get('auto') === '1') makeVideo().then(function (a) { if (a) { a.click(); document.title = 'done'; } });
+  });
+})();
+</script>
+</body>
+</html>
