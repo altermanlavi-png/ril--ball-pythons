@@ -304,6 +304,16 @@
   .seg input[value="refused"]:checked + span { background: var(--amber); border-color: var(--amber); color: #000; }
   .seg input[value="regurg"]:checked + span { background: var(--red); border-color: var(--red); color: #fff; }
   .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* sorting a clutch: one card per hatchling, tap the genes that showed */
+  .kid { border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin-bottom: 12px; background: var(--surface2); }
+  .kid-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .kid-head b { font-size: 1rem; }
+  .kid .seg span { padding: 8px 4px; font-size: .88rem; }
+  .kid-genes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; direction: ltr; }
+  .kgene { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 7px 12px; font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; }
+  .kgene.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .kgene.fixed { cursor: default; opacity: .85; }
+  .kid-hets { margin-top: 8px; font-size: .8rem; color: var(--muted); direction: ltr; text-align: start; }
   .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   .grid3 > * { min-width: 0; }
   .grid3 select { padding-inline: 8px; }
@@ -4434,6 +4444,7 @@ var qrcode = function() {
     else if (ui.sheet.type === 'wait') sh.innerHTML = waitFormHtml();
     else if (ui.sheet.type === 'label') sh.innerHTML = labelSheetHtml();
     else if (ui.sheet.type === 'pairlabel') { if (!pairOf(ui.sheet.pid)) return closeSheet(); sh.innerHTML = pairLabelSheetHtml(); }
+    else if (ui.sheet.type === 'kids') { if (!pairOf(ui.sheet.pid)) return closeSheet(); sh.innerHTML = kidsSheetHtml(); }
     else if (ui.sheet.type === 'share') { if (!s) return closeSheet(); sh.innerHTML = shareHtml(s); }
     else sh.innerHTML = snakeFormHtml();
   }
@@ -4843,6 +4854,7 @@ var qrcode = function() {
         '<div class="row" style="margin-top:10px"><label class="field" style="margin:0;flex:1">מספר צאצאים ליצירה<input type="number" id="kidsN" min="1" max="40" inputmode="numeric" value="' + (p.eggs || '') + '"></label>' +
         '<button class="btn btn-primary" type="button" data-act="makekids" data-id="' + p.id + '" style="align-self:flex-end;flex:none">יצירת צאצאים</button></div>' +
         (p.kidsMade ? '<p class="hint" style="margin-top:6px">נוצרו כבר ' + p.kidsMade + ' כרטיסי צאצאים מהזיווג הזה.</p>' : '') +
+        (pairKids(p).length ? '<button class="btn btn-soft wide" type="button" data-act="kidsort" data-id="' + p.id + '" style="margin-top:10px">מה יצא? סימון מין וגנים לגורים (' + pairKids(p).length + ')</button>' : '') +
         '<button class="btn btn-ghost wide" type="button" data-act="pairfail" data-id="' + p.id + '" style="margin-top:10px">' + (p.failed ? 'ביטול סימון "לא הצליח"' : 'סימון כלא הצליח') + '</button></div>';
     }
     return h;
@@ -4865,14 +4877,112 @@ var qrcode = function() {
     if (!p) return;
     if (!(n >= 1 && n <= 40)) return toast('כתבו כמה צאצאים ליצור (1–40)');
     if (p.kidsMade && !confirm('כבר נוצרו ' + p.kidsMade + ' צאצאים מהזיווג הזה. ליצור עוד ' + n + '?')) return;
-    var m = snakeById(p.maleId), when = p.hatched || todayISO();
+    var m = snakeById(p.maleId), when = p.hatched || todayISO(), base = kidGenes(p, {});
     for (var i = 1; i <= n; i++) {
-      db.snakes.push({ id: uid(), code: nextId(), name: '', species: m ? m.species : 'Ball Python', sex: '', genes: [], hatch: when,
+      db.snakes.push({ id: uid(), code: nextId(), name: '', species: m ? m.species : 'Ball Python', sex: '', genes: base.slice(), hatch: when, pairId: p.id,
         weight: '', status: '', location: '', feedEvery: '', notes: 'מהזיווג ' + pairName(p), photo: '', photos: [], fatherId: p.maleId, motherId: p.femaleId, createdAt: new Date().toISOString(), feedings: [], weights: [] });
     }
     p.kidsMade = (p.kidsMade || 0) + n;
     if (!p.hatched) p.hatched = when;
-    save(); closeSheet(); ui.tab = 'collection'; ui.sort = 'new'; ui.q = ''; ui.status = ''; renderPage(); toast('נוצרו ' + n + ' כרטיסי צאצאים');
+    save(); renderPage(); openSheet({ type: 'kids', pid: p.id }); toast('נוצרו ' + n + ' כרטיסי צאצאים. סמנו מה יצא על כל אחד');
+  }
+
+  /* ---------- sorting a clutch: the parents' genes on every hatchling, you mark what showed ---------- */
+  // what each parent can pass on, per gene: the chance one baby gets a copy from that parent
+  function parentGeneMap(s) {
+    var out = {};
+    (s ? s.genes || [] : []).forEach(function (g) {
+      var x = parseGene(g), pair = COMBO_EXPAND[canon(x.name).toLowerCase()];
+      (pair ? pair.map(function (n) { return { name: n, mode: geneMode(n), copies: 1, p: 1, pos: false }; }) : [x]).forEach(function (y) {
+        var q = y.copies >= 2 ? 1 : y.mode === 'recessive' ? y.p / 2 : (y.pos ? 0.25 : 0.5);
+        out[canon(y.name).toLowerCase()] = { name: canon(y.name), mode: y.mode, q: q };
+      });
+    });
+    return out;
+  }
+  function kidOptions(p) {
+    var a = parentGeneMap(snakeById(p.maleId)), b = parentGeneMap(snakeById(p.femaleId)), keys = [], out = [];
+    Object.keys(a).concat(Object.keys(b)).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); });
+    keys.forEach(function (k) {
+      var x = a[k] || b[k], qa = a[k] ? a[k].q : 0, qb = b[k] ? b[k].q : 0, o = { key: k, name: x.name, mode: x.mode, qa: qa, qb: qb };
+      if (o.mode === 'recessive') {
+        o.canShow = qa > 0 && qb > 0; o.always = qa >= 1 && qb >= 1;
+        var vis = qa * qb, het = qa * (1 - qb) + qb * (1 - qa);
+        o.hetP = vis >= 1 ? 0 : het / (1 - vis);
+      } else {
+        o.min = qa >= 1 || qb >= 1 ? 1 : 0;
+        o.max = o.mode !== 'dominant' && qa > 0 && qb > 0 ? 2 : 1;
+        if (qa >= 1 && qb >= 1) o.min = o.max;
+      }
+      out.push(o);
+    });
+    return out.sort(function (x, y) { return (x.mode === 'recessive' && !x.canShow) - (y.mode === 'recessive' && !y.canShow) || x.name.localeCompare(y.name, 'en'); });
+  }
+  // state per gene: copies the baby shows (0, 1, 2); for a recessive gene 2 means visual
+  function kidState(s, p) {
+    var have = {}, st = {};
+    (s.genes || []).forEach(function (g) { var x = parseGene(g); have[canon(x.name).toLowerCase()] = x; });
+    kidOptions(p).forEach(function (o) {
+      var h = have[o.key];
+      if (o.mode === 'recessive') st[o.key] = o.always || (o.canShow && h && h.copies >= 2) ? 2 : 0;
+      else st[o.key] = Math.max(o.min, Math.min(o.max, h && !h.pos ? h.copies : 0));
+    });
+    return st;
+  }
+  function kidGenes(p, st) {
+    var out = [];
+    kidOptions(p).forEach(function (o) {
+      var c = st[o.key];
+      if (o.mode === 'recessive') {
+        if (o.always || (o.canShow && c >= 2)) out.push(o.name);
+        else if (o.hetP > 0.001) out.push(comp(o.name, 'recessive', 1, o.hetP, false, false));
+      } else {
+        c = Math.max(o.min, Math.min(o.max, c == null ? o.min : c));
+        if (c > 0) out.push(comp(o.name, o.mode, c, 1, false, false));
+      }
+    });
+    return out;
+  }
+  function pairKids(p) { return db.snakes.filter(function (s) { return s.pairId === p.id; }); }
+  function setKidGenes(s, p, st) {
+    var keys = {}; kidOptions(p).forEach(function (o) { keys[o.key] = true; });
+    var extra = (s.genes || []).filter(function (g) { return !keys[canon(parseGene(g).name).toLowerCase()]; }); // genes added by hand stay
+    s.genes = kidGenes(p, st).concat(extra);
+  }
+  function kidToggle(sid, key) {
+    var s = snakeById(sid), p = s ? pairOf(s.pairId) : null; if (!p) return;
+    var o = kidOptions(p).find(function (x) { return x.key === key; }); if (!o) return;
+    var st = kidState(s, p);
+    if (o.mode === 'recessive') { if (!o.canShow || o.always) return; st[key] = st[key] >= 2 ? 0 : 2; }
+    else { if (o.min === o.max) return; st[key] = st[key] >= o.max ? o.min : st[key] + 1; }
+    setKidGenes(s, p, st); save(); renderPage(); kidsRefresh();
+  }
+  function kidSex(sid, v) { var s = snakeById(sid); if (!s) return; s.sex = v; save(); renderPage(); }
+  // redraw the sheet in place, keeping the scroll position
+  function kidsRefresh() { var sh = document.getElementById('sheet'), y = sh.scrollTop; renderSheet(); sh.scrollTop = y; }
+  function kidsSheetHtml() {
+    var p = pairOf(ui.sheet.pid), kids = pairKids(p), opts = kidOptions(p);
+    var h = '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button></div><h2 class="sheet-title">מה יצא?</h2>' +
+      '<p class="note" style="margin-bottom:4px">' + esc(pairName(p)) + '</p>' +
+      '<p class="note" style="margin-bottom:12px">לכל גור: סמנו זכר או נקבה, ולחצו על הגנים שרואים עליו. גן שיכול לצאת כפול עובר ל-Super בלחיצה נוספת. את ה-Het האפליקציה מחשבת לבד לפי ההורים.</p>';
+    if (!kids.length) return h + '<div class="empty"><p>אין עדיין גורים מהזיווג הזה.</p></div>';
+    kids.forEach(function (s, i) {
+      var st = kidState(s, p), mn = morphNames(s.genes), chips = '', hets = [];
+      h += '<div class="kid"><div class="kid-head"><b>גור ' + (i + 1) + ' · ' + esc(s.code || '') + '</b>' + (mn.length ? '<span class="morph" style="margin:0">' + esc(mn.join(', ')) + '</span>' : '') + '</div>' +
+        '<div class="seg" role="radiogroup">' + [['male', 'זכר ♂'], ['female', 'נקבה ♀'], ['', 'לא ידוע']].map(function (x) {
+          return '<label><input type="radio" name="ksex-' + s.id + '" data-kidsex="' + s.id + '" value="' + x[0] + '"' + ((s.sex || '') === x[0] ? ' checked' : '') + '><span>' + x[1] + '</span></label>';
+        }).join('') + '</div>';
+      opts.forEach(function (o) {
+        var c = st[o.key], on, fixed, label;
+        if (o.mode === 'recessive') { if (!o.canShow) return; on = c >= 2; fixed = o.always; label = o.name; }
+        else { on = c > 0; fixed = o.min === o.max; label = on ? comp(o.name, o.mode, c, 1, false, false) : o.name; }
+        chips += '<button type="button" class="kgene' + (on ? ' on' : '') + (fixed ? ' fixed' : '') + '" data-act="kidgene" data-id="' + s.id + '" data-g="' + esc(o.key) + '" aria-pressed="' + on + '">' + esc(label) + '</button>';
+      });
+      (s.genes || []).forEach(function (g) { var x = parseGene(g); if (x.mode === 'recessive' && x.copies === 1) hets.push(g); });
+      h += (chips ? '<div class="kid-genes">' + chips + '</div>' : '') + (hets.length ? '<div class="kid-hets">' + esc(hets.join(' · ')) + '</div>' : '') + '</div>';
+    });
+    if (!opts.length) h += '<p class="note">שני ההורים Normal, אז אין גנים לסמן. אפשר לסמן רק זכר או נקבה.</p>';
+    return h + '<button class="btn btn-primary wide" type="button" data-act="close">סיום</button>';
   }
   function pairToCalc(pid) {
     var p = pairOf(pid); if (!p) return;
@@ -5585,6 +5695,8 @@ var qrcode = function() {
       case 'pair2calc': pairToCalc(id); break;
       case 'pairlabel': openSheet({ type: 'pairlabel', pid: id }); break;
       case 'makekids': makeKids(id); break;
+      case 'kidsort': openSheet({ type: 'kids', pid: id }); break;
+      case 'kidgene': kidToggle(id, el.dataset.g); break;
       case 'sharecard': openSheet({ type: 'share', id: id }); break;
       case 'copyshare': copyShare(id); break;
       case 'pngshare': shareImage(id); break;
@@ -5663,6 +5775,7 @@ var qrcode = function() {
   })();
   document.addEventListener('change', function (e) {
     var t = e.target;
+    if (t.dataset && t.dataset.kidsex) { kidSex(t.dataset.kidsex, t.value); return; }
     // calculator: picking a snake loads its genetics right away and keeps it shown as picked
     if (t.id === 'selM' || t.id === 'selF') {
       var side = t.id === 'selM' ? 'male' : 'female', ps = snakeById(t.value);
