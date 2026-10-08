@@ -3553,6 +3553,17 @@ var qrcode = function() {
     if (inp) { inp.value = ''; try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); } }
     hideSug();
     if (form.id) { var s = snakeById(form.id); if (s) { s[kind + 'Id'] = v.id; s[kind + 'Text'] = v.text; save(); renderPage(); } }
+    // picking a parent fills in the parents' genetics, as long as the genes field is empty or still holds that automatic fill
+    if (!form.genes.length || form.genes.join('|') === form.autoGenes) { if (fillParentGenes()) { refreshChips(); persistFormGenes(); } }
+  }
+  // every gene the parents carry, ready to trim: visual genes once (tap for Super), recessive hets worked out from both parents
+  function fillParentGenes() {
+    var fid = form.father && form.father.id, mid = form.mother && form.mother.id;
+    if (!snakeById(fid) && !snakeById(mid)) return false;
+    var g = kidGenes({ maleId: fid, femaleId: mid }, {});
+    form.genes.length = 0; Array.prototype.push.apply(form.genes, g);
+    form.autoGenes = g.join('|');
+    return g.length > 0;
   }
   // a typed value that is not picked from the list: an exact code/name of a snake links to it, anything else stays as text
   function commitLin(inp) {
@@ -4455,6 +4466,7 @@ var qrcode = function() {
   function openForm(id) {
     var s = id ? snakeById(id) : null;
     form = { id: id || null, genes: s ? (s.genes || []).slice() : db.draftGenes, photos: s ? ((s.photos && s.photos.length) ? s.photos.slice() : (s.photo ? [s.photo] : [])) : [], father: parentState(s, 'father'), mother: parentState(s, 'mother') };
+    if (s && !form.genes.length) fillParentGenes(); // a baby with no genetics yet starts with everything its parents carry
     openSheet({ type: 'form', id: id || null });
   }
   function addFormGene(str) {
@@ -4937,7 +4949,7 @@ var qrcode = function() {
         if (o.always || (o.canShow && c >= 2)) out.push(o.name);
         else if (o.hetP > 0.001) out.push(comp(o.name, 'recessive', 1, o.hetP, false, false));
       } else {
-        c = Math.max(o.min, Math.min(o.max, c == null ? o.min : c));
+        c = Math.max(o.min, Math.min(o.max, c == null ? 1 : c)); // not marked yet: start with one copy, you take off what did not show
         if (c > 0) out.push(comp(o.name, o.mode, c, 1, false, false));
       }
     });
@@ -4964,7 +4976,7 @@ var qrcode = function() {
     var p = pairOf(ui.sheet.pid), kids = pairKids(p), opts = kidOptions(p);
     var h = '<div class="sheet-head"><button class="icon-btn" type="button" data-act="close" aria-label="סגירה">✕</button></div><h2 class="sheet-title">מה יצא?</h2>' +
       '<p class="note" style="margin-bottom:4px">' + esc(pairName(p)) + '</p>' +
-      '<p class="note" style="margin-bottom:12px">לכל גור: סמנו זכר או נקבה, ולחצו על הגנים שרואים עליו. גן שיכול לצאת כפול עובר ל-Super בלחיצה נוספת. את ה-Het האפליקציה מחשבת לבד לפי ההורים.</p>';
+      '<p class="note" style="margin-bottom:12px">כל גור מתחיל עם הגנים של ההורים. סמנו זכר או נקבה, ולחצו על גן כדי לשנות אותו: Super (כששני ההורים נושאים אותו), ובלחיצה נוספת הוא יורד. גן רצסיבי, למשל Pied, נדלק רק בלחיצה. את ה-Het האפליקציה מחשבת לבד.</p>';
     if (!kids.length) return h + '<div class="empty"><p>אין עדיין גורים מהזיווג הזה.</p></div>';
     kids.forEach(function (s, i) {
       var st = kidState(s, p), mn = morphNames(s.genes), chips = '', hets = [];
