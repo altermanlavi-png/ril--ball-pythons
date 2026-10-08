@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>RIL Ball Pythons · הנחש מסביר</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" sizes="192x192" href="../icon-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Frank+Ruhl+Libre:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: dark; --bg: #000; --surface: #0e0e0e; --surface2: #181818; --line: #2a2a2a; --text: #F5F5F5; --muted: #ababab; --amber: #E3A83B; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 400 16px/1.5 'Rubik', -apple-system, 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: calc(18px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 14px; padding: 8px 0 18px; }
+  header img { width: 84px; height: auto; mix-blend-mode: screen; flex: none; }
+  h1 { margin: 0; font: 900 1.8rem/1.1 'Frank Ruhl Libre', Georgia, serif; }
+  .sub { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+  .sub a { color: var(--amber); }
+  .layout { display: grid; gap: 22px; }
+  @media (min-width: 820px) { .layout { grid-template-columns: minmax(0, 1fr) 400px; align-items: start; } .stage { position: sticky; top: 16px; } }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .frame { position: relative; width: min(100%, calc(68vh * .5625)); border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+  .frame canvas { display: block; width: 100%; height: auto; }
+  .play { position: absolute; inset: 0; margin: auto; width: 74px; height: 74px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.55); font-size: 1.6rem; padding-inline-start: 6px; }
+  .play.on { opacity: 0; }
+  .play.on:hover { opacity: 1; }
+  .stagebtns { display: flex; gap: 8px; }
+  section { background: rgba(14,14,14,.92); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+  h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 700; }
+  h2 span { color: var(--muted); font-weight: 400; font-size: .85rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); background: var(--surface2); color: var(--muted); border-radius: 999px; padding: 7px 14px; font-size: .88rem; }
+  .chip.on { background: var(--text); border-color: var(--text); color: #000; font-weight: 700; }
+  label { display: block; color: var(--muted); font-size: .82rem; margin: 10px 0 4px; }
+  select, textarea { width: 100%; background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: var(--text); }
+  textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+  textarea:focus, select:focus { outline: none; border-color: var(--amber); }
+  input[type=range] { width: 100%; accent-color: var(--amber); }
+  .line { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
+  .line b { flex: none; width: 26px; height: 26px; margin-top: 8px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--line); display: grid; place-items: center; font-size: .8rem; color: var(--muted); }
+  .line.cur b { background: var(--amber); color: #111; border-color: var(--amber); }
+  .line div { flex: 1; min-width: 0; }
+  .line small { display: block; color: var(--muted); font-size: .75rem; margin-top: 2px; direction: ltr; text-align: right; }
+  .hint { color: var(--muted); font-size: .82rem; margin: 8px 0 0; }
+  .warn { color: var(--amber); font-size: .85rem; margin: 8px 0 0; }
+  .soft { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface2); border-radius: 10px; padding: 9px 14px; font-weight: 600; }
+  .song { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--muted); font-size: .9rem; }
+  .song span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .x { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface2); }
+  .go { display: block; width: 100%; padding: 15px; border: 0; border-radius: 14px; background: var(--amber); color: #111; font-weight: 800; font-size: 1.1rem; }
+  .go:disabled { opacity: .55; cursor: default; }
+  .prog { margin-top: 12px; }
+  .bar { height: 8px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--amber); }
+  .prog p { margin: 6px 0 0; color: var(--muted); font-size: .85rem; text-align: center; }
+  .result { margin-top: 14px; }
+  .result video { display: block; width: 100%; max-height: 60vh; border-radius: 12px; background: #000; }
+  .btns { display: flex; gap: 8px; margin-top: 10px; }
+  .btns > * { flex: 1; text-align: center; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 700; }
+  .save { background: var(--text); color: #000; }
+  .share { border: 1px solid var(--line); background: var(--surface2); }
+  .full { position: fixed; inset: 0; z-index: 50; background: #000; display: flex; align-items: center; justify-content: center; }
+  .full canvas { max-width: 100vw; max-height: 100vh; width: auto; height: 100vh; aspect-ratio: 9 / 16; }
+  .full button { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.5); opacity: .5; }
+  body.shot { overflow: hidden; }
+  body.shot canvas { position: fixed; top: 0; left: 0; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header><img src="../genetics/logo.jpg" alt="RIL Ball Pythons"><div><h1>הנחש מסביר</h1><p class="sub">הנחש מהלוגו מסביר גנטיקה בקול שלו · <a href="./">לסטודיו הרגיל</a></p></div></header>
+  <div class="layout">
+    <div class="stage">
+      <div class="frame" id="frame"><canvas id="cv" width="1080" height="1920"></canvas><button class="play" id="playbtn" type="button" aria-label="תצוגה מקדימה">▶</button></div>
+      <div class="stagebtns"><button class="soft" type="button" id="fullbtn">⛶ מסך מלא</button></div>
+    </div>
+    <div>
+      <section><h2>נושא</h2><div class="chips" id="topics"></div></section>
+      <section>
+        <h2>מה הנחש אומר <span>(אפשר לשנות כל משפט)</span></h2>
+        <div id="lines"></div>
+        <button class="soft" type="button" id="resetlines" style="margin-top:10px">החזרת הנוסח המקורי</button>
+      </section>
+      <section>
+        <h2>הקול של הנחש</h2>
+        <div class="chips" id="vmodes"></div>
+        <div id="ttsbox">
+          <label for="voice">קול</label>
+          <select id="voice"></select>
+          <label for="pitch">גובה הקול <span id="pitchv"></span></label>
+          <input type="range" id="pitch" min="0.5" max="2" step="0.05">
+          <label for="rate">מהירות <span id="ratev"></span></label>
+          <input type="range" id="rate" min="0.6" max="1.4" step="0.05">
+          <p class="warn" id="novoice" hidden>במכשיר הזה אין קול בעברית. באייפון: הגדרות › נגישות › תוכן מוקרא › קולות › עברית. באנדרואיד: הגדרות › המרת טקסט לדיבור › עברית. במחשב עם Windows: הגדרות › זמן ושפה › דיבור › הוספת קולות › עברית.</p>
+          <p class="hint">קול המכשיר נשמע בתצוגה, אבל דפדפן לא יכול לשמור אותו בתוך קובץ. כדי לשמור סרטון עם הקול: לוחצים "מסך מלא" ומקליטים את המסך עם הקלטת המסך של הטלפון (עם קול).</p>
+        </div>
+        <div id="filebox" hidden>
+          <button class="soft" type="button" id="addvoice">🎙 בחירת קובץ קול</button>
+          <input type="file" id="voicefile" accept="audio/*" hidden>
+          <div class="song" id="vfile" hidden><span id="vname"></span><button class="x" type="button" id="delvoice" aria-label="הסרת הקובץ">✕</button></div>
+          <label for="vpitch">שינוי קול <span id="vpitchv"></span></label>
+          <input type="range" id="vpitch" min="0.8" max="1.4" step="0.02">
+          <p class="hint">הקלטה אחת של כל התסריט, למשל הודעה קולית מוואטסאפ או קובץ מאתר קולות. הנחש מזיז את הפה לפי הקול, והכרטיסים מתחלפים לפי אורך כל משפט. שינוי קול מעל 1 נותן קול של דמות (וגם קצת יותר מהיר).</p>
+        </div>
+      </section>
+      <button class="go" type="button" id="go">יצירת סרטון</button>
+      <div class="prog" id="prog" hidden><div class="bar"><i id="barfill"></i></div><p id="progtxt">מכין…</p></div>
+      <div class="result" id="result" hidden>
+        <video id="out" controls playsinline></video>
+        <div class="btns"><a class="save" id="save" href="#">שמירה</a><button class="share" type="button" id="share" hidden>שיתוף</button></div>
+        <p class="warn" id="webmwarn" hidden>הדפדפן הזה שומר רק בפורמט WebM, ואינסטגרם לא תמיד מקבל אותו. בכרום או בספארי מעודכנים יוצא MP4.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var GOLD = '#E3A83B', KEY = 'ril.talk.v1', W = 1080, H = 1920, HEADY = 1150;
+  var FR = "'Frank Ruhl Libre', Georgia, serif", RB = "Rubik, Arial, sans-serif";
+
+  // ---------- the scripts: what the snake says, and what shows above it ----------
+  // show: title / gene (copies 1 or 2) / parents / results / logo; a line without show keeps the last card
+  var TOPICS = {
+    het: { name: 'מה זה Het?', lines: [
+      { say: 'היי! אני הנחש של RIL, והיום נדבר על Het.', show: { type: 'title', big: 'Het?', small: 'מה זה בעצם?' } },
+      { say: 'יש גנים שרואים רק כשיש לנחש שני עותקים שלהם. קוראים להם גנים רצסיביים, כמו Pied.', show: { type: 'gene', gene: 'Pied', copies: 2, note: 'שני עותקים: רואים את הגן' } },
+      { say: 'נחש עם עותק אחד בלבד נראה רגיל לגמרי, אבל הוא נושא את הגן. לזה קוראים Het.', show: { type: 'gene', gene: 'Het Pied', copies: 1, note: 'עותק אחד: לא רואים, אבל הוא נושא' } },
+      { say: 'עכשיו נזווג Het Pied עם Het Pied.', show: { type: 'parents', a: 'Het Pied', b: 'Het Pied' } },
+      { say: 'רבע מהגורים יוצאים Pied, וכל השאר נראים רגילים.', show: { type: 'results', rows: [['25%', 'Pied'], ['75%', 'נראים רגילים']] } },
+      { say: 'ומהגורים שנראים רגילים, שניים מכל שלושה נושאים את הגן. לכן כותבים עליהם 66% Het Pied.', show: { type: 'results', rows: [['25%', 'Pied'], ['50%', 'Het Pied'], ['25%', 'Normal']], foot: 'הגורים הרגילים = 66% Het Pied' } },
+      { say: 'רוצים לשמוע עוד על גנטיקה? עקבו אחרינו!', show: { type: 'logo' } }
+    ] },
+    super: { name: 'מה זה Super?', lines: [
+      { say: 'היי! אני הנחש של RIL, והיום נדבר על Super.', show: { type: 'title', big: 'Super?', small: 'מה זה בעצם?' } },
+      { say: 'יש גנים שרואים כבר עם עותק אחד, כמו Pastel. קוראים להם קו-דומיננטיים.', show: { type: 'gene', gene: 'Pastel', copies: 1, note: 'עותק אחד: כבר רואים' } },
+      { say: 'וכשיש לנחש שני עותקים של אותו גן, הוא יוצא עוד יותר בולט. זה Super Pastel.', show: { type: 'gene', gene: 'Super Pastel', copies: 2, note: 'שני עותקים: Super' } },
+      { say: 'עכשיו נזווג Pastel עם Pastel.', show: { type: 'parents', a: 'Pastel', b: 'Pastel' } },
+      { say: 'רבע מהגורים יוצאים Super Pastel, חצי Pastel, ורבע Normal.', show: { type: 'results', rows: [['25%', 'Super Pastel'], ['50%', 'Pastel'], ['25%', 'Normal']] } },
+      { say: 'ואם מזווגים Super Pastel עם נחש Normal, כל הגורים יוצאים Pastel.', show: { type: 'results', rows: [['100%', 'Pastel']], foot: 'Super Pastel × Normal' } },
+      { say: 'רוצים לשמוע עוד על גנטיקה? עקבו אחרינו!', show: { type: 'logo' } }
+    ] }
+  };
+  var S = { topic: 'het', says: {}, mode: 'tts', voice: '', pitch: 1.35, rate: 1, vpitch: 1 };
+  try { var sv = JSON.parse(localStorage.getItem(KEY) || 'null'); if (sv) Object.assign(S, sv); } catch (e) {}
+  if (!TOPICS[S.topic]) S.topic = 'het';
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  function lines() {
+    var t = TOPICS[S.topic], own = S.says[S.topic] || [], last = null;
+    return t.lines.map(function (l, i) { if (l.show) last = l.show; return { say: own[i] != null && own[i] !== '' ? own[i] : l.say, show: last, fresh: !!l.show }; });
+  }
+
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d'), A = {};
+
+  // ---------- helpers ----------
+  function clamp(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function seg(t, a, b) { return clamp((t - a) / (b - a)); }
+  function eo(x) { x = clamp(x); return 1 - Math.pow(1 - x, 3); }
+  function eob(x) { x = clamp(x); var c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function font(w, size, fam) { ctx.font = w + ' ' + size + 'px ' + fam; }
+  function fit(text, w, size, fam, maxW) { font(w, size, fam); var m = ctx.measureText(text).width; if (m > maxW) { size *= maxW / m; font(w, size, fam); } return size; }
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function dirOf(s) { var m = /[A-Za-z֐-׿]/.exec(s); return m && /[A-Za-z]/.test(m[0]) ? 'ltr' : 'rtl'; }
+  // English and numbers inside a Hebrew line are kept as one left-to-right run, so "66% Het Pied" stays in order
+  function iso(s) { return dirOf(s) === 'rtl' ? String(s).replace(/[A-Za-z0-9%][A-Za-z0-9% \-]*[A-Za-z0-9%]|[A-Za-z0-9%]/g, function (m) { return '⁦' + m + '⁩'; }) : s; }
+  function txt(s, x, y, color, a, align) { ctx.globalAlpha = clamp(a); ctx.fillStyle = color; ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle'; ctx.direction = dirOf(s); ctx.fillText(iso(s), x, y); }
+  function loadImg(src) { return new Promise(function (ok, bad) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = bad; i.src = src; }); }
+  function canvas(w, h) { var c = document.createElement('canvas'); c.width = Math.round(w); c.height = Math.round(h); return c; }
+  function wrap(text, maxW) {
+    var words = String(text).split(/\s+/), out = [], cur = '';
+    words.forEach(function (w) { var t = cur ? cur + ' ' + w : w; if (cur && ctx.measureText(t).width > maxW) { out.push(cur); cur = w; } else cur = t; });
+    if (cur) out.push(cur);
+    return out;
+  }
+  // small deterministic noise, so the idle motion never repeats in an obvious loop
+  function wob(t, a, b) { return Math.sin(t * a) * .6 + Math.sin(t * b + 1.3) * .4; }
+
+  // ---------- the logo: white-on-transparent copy, and the head cut out of it ----------
+  // head box in the logo file (756 × 536); the mouth line is a soft curve across the snout
+  var HB = { x: 331, y: 18, w: 118, h: 104, cx: 390, cy: 70, rx: 58, ry: 51 };
+  var MOUTH = [[344, 90], [390, 101], [436, 90]];
+  function prep(img) {
+    var c = canvas(img.naturalWidth, img.naturalHeight), x = c.getContext('2d');
+    x.drawImage(img, 0, 0);
+    var d = x.getImageData(0, 0, c.width, c.height), p = d.data;
+    for (var i = 0; i < p.length; i += 4) { var l = Math.max(p[i], p[i + 1], p[i + 2]); p[i] = p[i + 1] = p[i + 2] = 255; p[i + 3] = clamp((l - 20) / 210) * 255; }
+    x.putImageData(d, 0, 0);
+    A.logo = c; A.raw = img;
+    // the head on solid black inside its oval, split along the mouth into skull and jaw
+    var k = 4, hc = canvas(HB.w * k, HB.h * k), hx = hc.getContext('2d');
+    function oval(g) { g.beginPath(); g.ellipse((HB.cx - HB.x) * k, (HB.cy - HB.y) * k, HB.rx * k, HB.ry * k, 0, 0, 6.2832); }
+    function mouthPath(g, below) {
+      var m = MOUTH;
+      g.beginPath(); g.moveTo(0, (m[0][1] - HB.y) * k);
+      g.lineTo((m[0][0] - HB.x) * k, (m[0][1] - HB.y) * k);
+      g.quadraticCurveTo((m[1][0] - HB.x) * k, (m[1][1] - HB.y) * k * 2 - (m[0][1] - HB.y) * k, (m[2][0] - HB.x) * k, (m[2][1] - HB.y) * k);
+      g.lineTo(HB.w * k, (m[2][1] - HB.y) * k);
+      g.lineTo(HB.w * k, below ? HB.h * k : 0); g.lineTo(0, below ? HB.h * k : 0); g.closePath();
+    }
+    function part(below) {
+      var c2 = canvas(HB.w * k, HB.h * k), g = c2.getContext('2d');
+      g.imageSmoothingQuality = 'high';
+      oval(g); g.fillStyle = '#000'; g.fill();
+      g.save(); oval(g); g.clip(); mouthPath(g, below); g.clip();
+      g.drawImage(img, HB.x, HB.y, HB.w, HB.h, 0, 0, HB.w * k, HB.h * k);
+      g.restore();
+      // keep only the oval and this side of the mouth
+      g.globalCompositeOperation = 'destination-in'; mouthPath(g, below); g.fill();
+      return c2;
+    }
+    A.skull = part(false); A.jaw = part(true); A.hk = k;
+  }
+
+  // ---------- the snake: coils on the floor, a neck rising out of them, the logo head on top ----------
+  function spine(t, talk) {
+    var cx = 470, base = 1790, turns = 2.1, R0 = 235, R1 = 175, gap = 112, e = .3, pts = [];
+    var th0 = Math.PI / 2 - Math.PI * 2 * turns, n = Math.round(turns * 72);
+    var breathe = 1 + .012 * Math.sin(t * 1.6);
+    for (var i = 0; i <= n; i++) {
+      var f = i / n, th = th0 + f * Math.PI * 2 * turns, R = (R0 + (R1 - R0) * f) * breathe;
+      pts.push({ x: cx + Math.cos(th) * R, y: base - gap * turns * f + Math.sin(th) * R * e - R0 * e, z: Math.sin(th), w: (178 - 22 * f) * (.25 + .75 * Math.sqrt(Math.min(1, f / .16))) }); // the tail tapers to a point
+    }
+    // neck: from the front of the top coil up to the head, swaying a little
+    var p0 = pts[pts.length - 1], sway = wob(t, .9, .53) * 34 + talk * 6, lean = wob(t, .41, .77) * 18;
+    var hx = cx + 30 + sway, hy = HEADY - talk * 10 + Math.sin(t * 1.6) * 6;
+    var c1 = { x: p0.x - 120, y: p0.y - 150 }, c2 = { x: hx + 150 + lean, y: hy + 330 }, p3 = { x: hx, y: hy + 120 };
+    var m = 46;
+    for (i = 1; i <= m; i++) {
+      var u = i / m, v = 1 - u;
+      pts.push({ x: v * v * v * p0.x + 3 * v * v * u * c1.x + 3 * v * u * u * c2.x + u * u * u * p3.x, y: v * v * v * p0.y + 3 * v * v * u * c1.y + 3 * v * u * u * c2.y + u * u * u * p3.y, z: 2, w: 156 - 40 * u, neck: true });
+    }
+    return { pts: pts, head: { x: hx, y: hy, rot: (sway / 34) * .05 + wob(t, .63, 1.1) * .03 } };
+  }
+  function chunks(pts) {
+    // split where the coil goes from back to front, so the front of every ring covers the back of the next
+    var out = [], s0 = 0, side = function (p) { return p.neck ? 2 : p.z >= 0 ? 1 : 0; };
+    // the black core runs a few points past each end, so no white outline shows across the body where two parts meet
+    function add(s, e) { out.push({ pts: pts.slice(s, e + 1), core: pts.slice(Math.max(0, s - 3), Math.min(pts.length, e + 4)), side: side(pts[e]), idx: out.length }); }
+    for (var i = 1; i < pts.length; i++) if (side(pts[i - 1]) !== side(pts[i])) { add(s0, i); s0 = i; }
+    add(s0, pts.length - 1);
+    return out.sort(function (p, q) { return p.side - q.side || p.idx - q.idx; });
+  }
+  function tube(list, width, color, cap) {
+    ctx.lineCap = cap; ctx.lineJoin = 'round'; ctx.strokeStyle = color;
+    // the width tapers, so draw in short runs
+    for (var i = 1; i < list.length; i += 4) {
+      var j = Math.min(list.length - 1, i + 4);
+      ctx.beginPath(); ctx.moveTo(list[i - 1].x, list[i - 1].y);
+      for (var k = i; k <= j; k++) ctx.lineTo(list[k].x, list[k].y);
+      ctx.lineWidth = width(list[i]); ctx.stroke();
+    }
+  }
+  function blotches(list, startLen) {
+    // ball python pattern in the logo's style: white patches with a black "eye" in them
+    var len = startLen;
+    for (var i = 1; i < list.length; i++) {
+      var a = list[i - 1], b = list[i], d = Math.hypot(b.x - a.x, b.y - a.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
+      len += d;
+      var step = b.w * .95;
+      if (len >= step) {
+        len -= step;
+        var side = i % 2 ? 1 : -1, off = side * b.w * .16;
+        var px = b.x - Math.sin(ang) * off, py = b.y + Math.cos(ang) * off, r = b.w;
+        ctx.save(); ctx.translate(px, py); ctx.rotate(ang + side * .35);
+        // a long patch with a rounded lobe on one end, like the patches in the logo
+        ctx.fillStyle = '#f2f2f2'; ctx.beginPath();
+        ctx.moveTo(-r * .34, 0);
+        ctx.bezierCurveTo(-r * .3, -r * .2, r * .05, -r * .17, r * .2, -r * .2);
+        ctx.bezierCurveTo(r * .38, -r * .22, r * .4, r * .02, r * .26, r * .1);
+        ctx.bezierCurveTo(r * .1, r * .2, -r * .3, r * .18, -r * .34, 0);
+        ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(r * .2, -r * .05, r * .075, r * .06, 0, 0, 6.2832); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-r * .12, r * .02, r * .045, r * .035, 0, 0, 6.2832); ctx.fill();
+        ctx.restore();
+      }
+    }
+    return len;
+  }
+  function drawSnake(t, talk, blink, tongue) {
+    var s = spine(t, talk), groups = chunks(s.pts);
+    // soft shadow on the floor
+    var g = ctx.createRadialGradient(470, 1815, 10, 470, 1815, 310);
+    g.addColorStop(0, 'rgba(0,0,0,.65)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(470, 1815, 310, 66, 0, 0, 6.2832); ctx.fill();
+    groups.forEach(function (c) {
+      tube(c.pts, function (p) { return p.w + 14; }, '#fff', 'butt');
+      tube(c.core, function (p) { return p.w; }, '#050505', 'butt');
+      blotches(c.pts, (c.idx * 37) % 60);
+    });
+    drawHead(s.head, talk, blink, tongue);
+  }
+  function drawHead(h, talk, blink, tongue) {
+    var k = A.hk, sc = 2.75 / k, w = A.skull.width * sc, hh = A.skull.height * sc;
+    var mx = (MOUTH[1][0] - HB.x) * k * sc, my = (MOUTH[1][1] - HB.y) * k * sc, open = talk * 26;
+    ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(h.rot); ctx.translate(-w / 2, -hh / 2);
+    ctx.globalAlpha = 1;
+    // inside of the mouth, then the tongue, then the jaw slides down, then the skull on top
+    if (open > 1) {
+      ctx.fillStyle = '#2a0608'; ctx.beginPath(); ctx.ellipse(mx, my - 2, 66, 8 + open * .9, 0, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#b5303c'; ctx.beginPath(); ctx.ellipse(mx, my + open * .55, 40, 6 + open * .25, 0, 0, 6.2832); ctx.fill();
+    }
+    if (tongue > 0) {
+      var L = 30 + 95 * tongue, f = Math.sin(tongue * 30) * 6;
+      ctx.strokeStyle = '#d23a48'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + f, my + L);
+      ctx.moveTo(mx + f, my + L); ctx.lineTo(mx + f - 18, my + L + 26);
+      ctx.moveTo(mx + f, my + L); ctx.lineTo(mx + f + 18, my + L + 26); ctx.stroke();
+    }
+    ctx.drawImage(A.jaw, 0, open, w, hh);
+    ctx.drawImage(A.skull, 0, 0, w, hh);
+    if (blink > 0) { // eyelids: the white patch closes over each eye
+      [[355, 59], [425, 59]].forEach(function (e) {
+        var ex = (e[0] - HB.x) * k * sc, ey = (e[1] - HB.y) * k * sc;
+        ctx.fillStyle = '#f0f0f0'; ctx.beginPath(); ctx.ellipse(ex, ey, 17, 17 * blink + .5, 0, 0, 6.2832); ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(ex - 15, ey + 2); ctx.quadraticCurveTo(ex, ey + 9 * blink, ex + 15, ey + 2); ctx.stroke();
+      });
+    }
+    ctx.restore();
+  }
+
+  // ---------- background, cards, speech bubble ----------
+  function background(t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    var g = ctx.createRadialGradient(W / 2, 560, 0, W / 2, 560, 1100);
+    g.addColorStop(0, 'rgba(58,42,14,.55)'); g.addColorStop(.5, 'rgba(22,16,6,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    var lw = 230, lh = lw * A.logo.height / A.logo.width;
+    ctx.globalAlpha = .95; ctx.drawImage(A.logo, (W - lw) / 2, 70, lw, lh);
+    ctx.globalAlpha = 1; ctx.fillStyle = GOLD; ctx.fillRect(0, H - 10, W, 10);
+  }
+  function genePill(text, cx, cy, size, a, gold) {
+    var sz = fit(text, 700, size, RB, 440), tw = ctx.measureText(text).width, pw = tw + 70, ph = sz * 1.9;
+    ctx.globalAlpha = clamp(a); rr(cx - pw / 2, cy - ph / 2, pw, ph, ph / 2);
+    ctx.fillStyle = gold ? GOLD : 'rgba(227,168,59,.12)'; ctx.fill();
+    if (!gold) { ctx.lineWidth = 3; ctx.strokeStyle = GOLD; ctx.stroke(); }
+    txt(text, cx, cy + sz * .04, gold ? '#111' : '#fff', a);
+    return pw;
+  }
+  var CARD = {
+    title: function (c, lt, a) {
+      var e = eob(seg(lt, 0, .7));
+      ctx.save(); ctx.translate(W / 2, 420); ctx.scale(.8 + .2 * e, .8 + .2 * e);
+      fit(c.big, 900, 230, FR, W * .8); txt(c.big, 0, 0, '#fff', a * clamp(e * 1.5));
+      ctx.restore();
+      if (c.small) { fit(c.small, 500, 56, RB, W * .8); txt(c.small, W / 2, 590, GOLD, a * eo(seg(lt, .4, 1))); }
+    },
+    gene: function (c, lt, a) {
+      var e = eob(seg(lt, 0, .6));
+      ctx.save(); ctx.translate(W / 2, 370); ctx.scale(.85 + .15 * e, .85 + .15 * e); genePill(c.gene, 0, 0, 72, a * clamp(e * 1.4), c.copies === 2); ctx.restore();
+      // two gene slots: filled gold = a copy of the gene
+      for (var i = 0; i < 2; i++) {
+        var on = i < c.copies, x = W / 2 + (i ? 80 : -80), y = 520, ee = eob(seg(lt, .35 + i * .25, .85 + i * .25));
+        ctx.globalAlpha = a * clamp(ee * 1.4);
+        ctx.beginPath(); ctx.arc(x, y, 46 * (.6 + .4 * ee), 0, 6.2832);
+        ctx.fillStyle = on ? GOLD : 'rgba(255,255,255,.06)'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = on ? GOLD : '#555'; ctx.stroke();
+        if (on) { font(800, 40, RB); txt('✓', x, y + 2, '#111', a * ee); }
+      }
+      if (c.note) { fit(c.note, 500, 48, RB, W * .86); txt(c.note, W / 2, 640, '#e6e6e6', a * eo(seg(lt, .8, 1.3))); }
+    },
+    parents: function (c, lt, a) {
+      var e1 = eo(seg(lt, 0, .5)), e2 = eo(seg(lt, .3, .8)), ex = eob(seg(lt, .55, 1));
+      font(500, 40, RB); txt('אבא', W / 2 + 250, 330, '#bdbdbd', a * e1); txt('אמא', W / 2 - 250, 330, '#bdbdbd', a * e2);
+      genePill(c.a, W / 2 + 250 + (1 - e1) * 60, 420, 56, a * e1, false);
+      genePill(c.b, W / 2 - 250 - (1 - e2) * 60, 420, 56, a * e2, false);
+      font(900, 110, FR); ctx.save(); ctx.translate(W / 2, 425); ctx.rotate((1 - ex) * 1.2); txt('×', 0, 0, GOLD, a * clamp(ex * 1.4)); ctx.restore();
+    },
+    results: function (c, lt, a) {
+      var n = c.rows.length, top = n > 2 ? 255 : 320, gap = n > 2 ? 108 : 140;
+      c.rows.forEach(function (r, i) {
+        var e = eo(seg(lt, .15 + i * .35, .75 + i * .35)), y = top + i * gap, pct = parseFloat(r[0]) / 100, bw = 820, bx = (W - bw) / 2;
+        ctx.globalAlpha = a * e; rr(bx, y, bw, 88, 44); ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.fill();
+        var fw = Math.max(88, bw * pct * e); rr(bx + bw - fw, y, fw, 88, 44); ctx.fillStyle = i === 0 ? GOLD : 'rgba(227,168,59,.35)'; ctx.fill();
+        font(800, 50, RB); txt(r[0], bx + bw - 30, y + 46, i === 0 ? '#111' : '#fff', a * e, 'right');
+        fit(r[1], 600, 46, RB, 480); ctx.direction = dirOf(r[1]); ctx.globalAlpha = a * e; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(r[1], bx + 34, y + 46);
+      });
+      if (c.foot) { fit(c.foot, 600, 46, RB, W * .86); txt(c.foot, W / 2, top + n * gap + 14, GOLD, a * eo(seg(lt, .4 + n * .35, 1 + n * .35))); }
+    },
+    logo: function (c, lt, a) {
+      var e = eob(seg(lt, 0, .8)), lw = 640 * (.85 + .15 * e), lh = lw * A.logo.height / A.logo.width;
+      ctx.globalAlpha = a * clamp(e * 1.3); ctx.drawImage(A.logo, (W - lw) / 2, 430 - lh / 2, lw, lh);
+    }
+  };
+  function bubble(text, a, headY) {
+    if (!text || a <= 0) return;
+    var size = 54; font(600, size, RB);
+    var maxW = W - 200, ls = wrap(text, maxW);
+    while (ls.length > 4 && size > 36) { size -= 4; font(600, size, RB); ls = wrap(text, maxW); }
+    var lh = size * 1.32, bh = ls.length * lh + 60, bw = Math.min(W - 80, Math.max.apply(null, ls.map(function (l) { return ctx.measureText(l).width; })) + 90);
+    var bx = (W - bw) / 2, by = headY - 70 - bh;
+    ctx.globalAlpha = clamp(a); ctx.fillStyle = 'rgba(255,255,255,.96)';
+    rr(bx, by, bw, bh, 34); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W / 2 - 30, by + bh - 2); ctx.lineTo(W / 2 + 26, by + bh - 2); ctx.lineTo(W / 2 - 40, by + bh + 50); ctx.closePath(); ctx.fill();
+    ls.forEach(function (l, i) { font(600, size, RB); txt(l, W / 2, by + 30 + lh * (i + .5), '#111', a); });
+  }
+
+  // ---------- one frame ----------
+  // st: { t: seconds since start, i: line, lt: seconds in line, talk: 0..1, done: 0..1 fade at end }
+  function draw(st) {
+    var L = lines(), cur = L[Math.min(st.i, L.length - 1)];
+    background(st.t);
+    var show = cur.show, firstOf = st.i;
+    while (firstOf > 0 && L[firstOf - 1].show === show) firstOf--;
+    var cardT = st.cardT != null ? st.cardT : st.lt;
+    ctx.save(); if (show && CARD[show.type]) CARD[show.type](show, cardT, 1); ctx.restore();
+    var blink = 0, bp = (st.t % 4.3); if (bp > 4.1) blink = Math.sin((bp - 4.1) / .2 * Math.PI);
+    var tongue = 0, tp = (st.t + 1.7) % 6.1; if (!st.talk && tp < .55) tongue = Math.sin(tp / .55 * Math.PI);
+    drawSnake(st.t, st.talk || 0, blink, tongue);
+    bubble(cur.say, st.bubble == null ? 1 : st.bubble, HEADY - 150);
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- timing ----------
+  function estDur(s) { return .9 + s.length * .068; }
+  // when a line's card starts: the first line that brought it in
+  function cardStart(L, i, starts) { var j = i; while (j > 0 && L[j - 1].show === L[i].show) j--; return starts[j]; }
+
+  // ---------- voice: the device's Hebrew voice, or a recorded file ----------
+  var voices = [], playing = null, busy = false;
+  function heVoices() { return (window.speechSynthesis ? speechSynthesis.getVoices() : []).filter(function (v) { return /^he|^iw/i.test(v.lang); }); }
+  function fillVoices() {
+    voices = heVoices();
+    var sel = document.getElementById('voice');
+    sel.innerHTML = voices.map(function (v) { return '<option value="' + v.voiceURI.replace(/"/g, '&quot;') + '"' + (v.voiceURI === S.voice ? ' selected' : '') + '>' + v.name + '</option>'; }).join('') || '<option>אין קול בעברית</option>';
+    document.getElementById('novoice').hidden = voices.length > 0;
+  }
+  if (window.speechSynthesis) { fillVoices(); speechSynthesis.onvoiceschanged = fillVoices; }
+  function pickVoice() { return voices.filter(function (v) { return v.voiceURI === S.voice; })[0] || voices[0] || null; }
+
+  var AC = null, vbuf = null, vname = '';
+  function audioCtx() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; }
+
+  function stopPlay() {
+    if (playing) { playing.stop = true; cancelAnimationFrame(playing.raf); if (playing.src) try { playing.src.stop(); } catch (e) {} playing = null; }
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    setPlayBtn(); markLine(-1);
+  }
+  function setPlayBtn() { var b = document.getElementById('playbtn'); b.classList.toggle('on', !!playing); b.textContent = playing ? '■' : '▶'; b.style.paddingInlineStart = playing ? '0' : ''; }
+  function markLine(i) { Array.prototype.forEach.call(document.querySelectorAll('.line'), function (el, j) { el.classList.toggle('cur', j === i); }); }
+
+  // live play with the device voice: each line is spoken, the next starts when it ends
+  function playTTS(onEnd) {
+    var L = lines(), me = playing = { }, t0 = performance.now(), i = -1, lineT0 = 0, speaking = false, starts = [], tail = 0;
+    var v = pickVoice();
+    function next() {
+      if (me.stop) return;
+      i++;
+      if (i >= L.length) { tail = performance.now(); return; }
+      lineT0 = (performance.now() - t0) / 1000; starts[i] = lineT0; markLine(i);
+      if (!v) { speaking = true; setTimeout(function () { speaking = false; setTimeout(next, 350); }, estDur(L[i].say) * 1000); return; }
+      var u = new SpeechSynthesisUtterance(L[i].say); u.voice = v; u.lang = v.lang; u.pitch = S.pitch; u.rate = S.rate;
+      u.onstart = function () { speaking = true; };
+      u.onend = u.onerror = function () { speaking = false; if (!me.stop) setTimeout(next, 380); };
+      speechSynthesis.speak(u);
+    }
+    function step(now) {
+      if (playing !== me) return;
+      var t = (now - t0) / 1000, ii = Math.max(0, Math.min(i, L.length - 1));
+      var talk = speaking ? .25 + .75 * Math.abs(Math.sin(t * 10.5)) * (.55 + .45 * Math.abs(Math.sin(t * 3.7 + 1))) : 0;
+      draw({ t: t, i: ii, lt: t - lineT0, cardT: t - (cardStart(L, ii, starts) || 0), talk: talk });
+      if (tail && now - tail > 1800) { playing = null; setPlayBtn(); markLine(-1); if (onEnd) onEnd(); return; }
+      me.raf = requestAnimationFrame(step);
+    }
+    setTimeout(next, 500);
+    me.raf = requestAnimationFrame(step); setPlayBtn();
+    return me;
+  }
+  // with a recorded file: lines get time in proportion to their length; the mouth follows the loudness
+  function fileTimeline(dur) {
+    var L = lines(), tot = L.reduce(function (n, l) { return n + l.say.length + 12; }, 0), s = .5, out = [];
+    L.forEach(function (l) { var d = (l.say.length + 12) / tot * dur; out.push(s); s += d; });
+    return out;
+  }
+  function playFile(onEnd, onTick, dest) {
+    var L = lines(), ac = audioCtx(), rate = S.vpitch, dur = vbuf.duration / rate, starts = fileTimeline(dur), total = dur + 2.3;
+    var src = ac.createBufferSource(); src.buffer = vbuf; src.playbackRate.value = rate;
+    var an = ac.createAnalyser(); an.fftSize = 1024; var buf = new Float32Array(an.fftSize);
+    src.connect(an); an.connect(ac.destination); if (dest) an.connect(dest);
+    var me = playing = { src: src }, t0 = null, lvl = 0, lastI = -1;
+    function step(now) {
+      if (playing !== me) return;
+      if (t0 === null) { t0 = now; src.start(ac.currentTime + .5); }
+      var t = (now - t0) / 1000, i = 0;
+      while (i < starts.length - 1 && t >= starts[i + 1]) i++;
+      if (i !== lastI) { markLine(i); lastI = i; }
+      an.getFloatTimeDomainData(buf); var r = 0; for (var k = 0; k < buf.length; k++) r += buf[k] * buf[k]; r = Math.sqrt(r / buf.length);
+      lvl += ((clamp((r - .012) * 9)) - lvl) * .5;
+      draw({ t: t, i: i, lt: t - starts[i], cardT: t - cardStart(L, i, starts), talk: lvl });
+      if (onTick) onTick(t / total);
+      if (t >= total) { playing = null; setPlayBtn(); markLine(-1); if (onEnd) onEnd(); return; }
+      me.raf = requestAnimationFrame(step);
+    }
+    me.raf = requestAnimationFrame(step); setPlayBtn();
+    return me;
+  }
+  // still preview: the chosen line, its card fully shown
+  var stillI = 0;
+  function stillFrame() { if (!playing) draw({ t: 2.2 + stillI * .9, i: stillI, lt: 3, cardT: 3, talk: 0 }); }
+
+  document.getElementById('playbtn').onclick = function () {
+    if (busy) return;
+    if (playing) { stopPlay(); stillFrame(); return; }
+    var done = function () { setTimeout(stillFrame, 600); };
+    if (S.mode === 'file') { if (!vbuf) { alert('בחרו קודם קובץ קול'); return; } playFile(done); }
+    else playTTS(done);
+  };
+
+  // ---------- full screen (for screen recording with the device voice) ----------
+  document.getElementById('fullbtn').onclick = function () {
+    stopPlay();
+    var box = document.createElement('div'); box.className = 'full';
+    var close = document.createElement('button'); close.type = 'button'; close.textContent = '✕'; close.setAttribute('aria-label', 'יציאה');
+    var frame = document.getElementById('frame');
+    box.appendChild(cv); box.appendChild(close); document.body.appendChild(box);
+    try { box.requestFullscreen && box.requestFullscreen().catch(function () {}); } catch (e) {}
+    stillI = 0; stillFrame();
+    var started = false;
+    box.onclick = function (e) {
+      if (e.target === close) { stopPlay(); if (document.fullscreenElement) document.exitFullscreen().catch(function () {}); frame.insertBefore(cv, frame.firstChild); box.remove(); stillFrame(); return; }
+      if (started) return; started = true;
+      setTimeout(function () { var end = function () { started = false; }; if (S.mode === 'file' && vbuf) playFile(end); else playTTS(end); }, 1200);
+    };
+  };
+
+  // ---------- recording (file voice only: the device voice cannot be captured by the page) ----------
+  function pickMime() {
+    if (!window.MediaRecorder) return null;
+    var l = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1.42E01F,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    for (var i = 0; i < l.length; i++) if (MediaRecorder.isTypeSupported(l[i])) return l[i];
+    return '';
+  }
+  var lastUrl = null;
+  async function makeVideo() {
+    if (busy) return;
+    if (S.mode !== 'file') { alert('עם קול המכשיר שומרים בהקלטת מסך: לוחצים "מסך מלא", מתחילים הקלטת מסך בטלפון ונוגעים במסך כדי שהנחש יתחיל לדבר.\n\nכדי לקבל קובץ סרטון ישר מכאן, בחרו "קובץ קול" והעלו הקלטה של התסריט.'); return; }
+    if (!vbuf) { alert('בחרו קודם קובץ קול'); return; }
+    var mime = pickMime();
+    if (mime === null || !cv.captureStream) { alert('הדפדפן הזה לא יודע להקליט סרטון. נסו בכרום או בספארי מעודכנים.'); return; }
+    busy = true; stopPlay();
+    var go = document.getElementById('go'), prog = document.getElementById('prog'), fill = document.getElementById('barfill'), ptxt = document.getElementById('progtxt');
+    go.disabled = true; prog.hidden = false; document.getElementById('result').hidden = true;
+    ptxt.textContent = 'מקליט… השאירו את המסך פתוח עד הסוף'; fill.style.width = '0';
+    var ac = audioCtx(), dest = ac.createMediaStreamDestination(), stream = cv.captureStream(30), lock = null;
+    stream.addTrack(dest.stream.getAudioTracks()[0]);
+    var opts = { videoBitsPerSecond: 10000000, audioBitsPerSecond: 192000 }; if (mime) opts.mimeType = mime;
+    var rec = new MediaRecorder(stream, opts), chunks = [];
+    rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+    var stopped = new Promise(function (r) { rec.onstop = r; });
+    try { lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+    rec.start(250);
+    await new Promise(function (r) { playFile(r, function (f) { fill.style.width = Math.min(100, f * 100) + '%'; }, dest); });
+    await sleep(300);
+    rec.stop(); await stopped;
+    stream.getTracks().forEach(function (tr) { tr.stop(); });
+    if (lock) try { lock.release(); } catch (e) {}
+    var type = (rec.mimeType || mime || 'video/webm').split(';')[0], ext = /mp4/.test(type) ? 'mp4' : 'webm';
+    var blob = new Blob(chunks, { type: type }), name = 'RIL-' + S.topic + '.' + ext;
+    if (lastUrl) URL.revokeObjectURL(lastUrl);
+    lastUrl = URL.createObjectURL(blob);
+    var out = document.getElementById('out'), save = document.getElementById('save'), share = document.getElementById('share');
+    out.src = lastUrl; save.href = lastUrl; save.download = name;
+    var file = new File([blob], name, { type: type });
+    share.hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
+    share.onclick = function () { navigator.share({ files: [file], title: 'RIL Ball Pythons' }).catch(function () {}); };
+    document.getElementById('webmwarn').hidden = ext === 'mp4';
+    prog.hidden = true; go.disabled = false; document.getElementById('result').hidden = false; busy = false;
+    stillFrame();
+  }
+  document.getElementById('go').onclick = makeVideo;
+
+  // ---------- controls ----------
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var SHOWN = { title: 'כותרת', gene: 'כרטיס גן', parents: 'ההורים', results: 'אחוזים', logo: 'לוגו' };
+  function renderTopics() {
+    document.getElementById('topics').innerHTML = Object.keys(TOPICS).map(function (k) { return '<button class="chip' + (k === S.topic ? ' on' : '') + '" type="button" data-t="' + k + '">' + TOPICS[k].name + '</button>'; }).join('');
+  }
+  function renderLines() {
+    var base = TOPICS[S.topic].lines;
+    document.getElementById('lines').innerHTML = lines().map(function (l, i) {
+      var sh = base[i].show, what = sh ? SHOWN[sh.type] + (sh.gene ? ': ' + sh.gene : sh.a ? ': ' + sh.a + ' × ' + sh.b : '') : '';
+      return '<div class="line"><b>' + (i + 1) + '</b><div><textarea data-i="' + i + '" rows="2">' + esc(l.say) + '</textarea>' + (what ? '<small>' + esc(what) + '</small>' : '') + '</div></div>';
+    }).join('');
+  }
+  function renderModes() {
+    document.getElementById('vmodes').innerHTML = [['tts', 'קול של המכשיר'], ['file', 'קובץ קול']].map(function (m) { return '<button class="chip' + (m[0] === S.mode ? ' on' : '') + '" type="button" data-m="' + m[0] + '">' + m[1] + '</button>'; }).join('');
+    document.getElementById('ttsbox').hidden = S.mode !== 'tts'; document.getElementById('filebox').hidden = S.mode !== 'file';
+    document.getElementById('go').textContent = S.mode === 'file' ? 'יצירת סרטון' : 'איך שומרים סרטון?';
+  }
+  document.getElementById('topics').onclick = function (e) { var b = e.target.closest('[data-t]'); if (!b || busy) return; stopPlay(); S.topic = b.dataset.t; persist(); renderTopics(); renderLines(); stillI = 0; stillFrame(); };
+  document.getElementById('vmodes').onclick = function (e) { var b = e.target.closest('[data-m]'); if (!b || busy) return; stopPlay(); S.mode = b.dataset.m; persist(); renderModes(); };
+  document.getElementById('lines').addEventListener('input', function (e) {
+    var i = e.target.dataset.i; if (i == null) return;
+    var own = S.says[S.topic] = S.says[S.topic] || []; own[+i] = e.target.value.trim(); persist();
+    if (!playing) { stillI = +i; stillFrame(); }
+  });
+  document.getElementById('lines').addEventListener('focusin', function (e) { var i = e.target.dataset.i; if (i != null && !playing) { stillI = +i; stillFrame(); } });
+  document.getElementById('resetlines').onclick = function () { if (!confirm('להחזיר את כל המשפטים בנושא הזה לנוסח המקורי?')) return; delete S.says[S.topic]; persist(); renderLines(); stillFrame(); };
+  function slider(id, key, out, fmt) {
+    var el = document.getElementById(id), o = document.getElementById(out);
+    el.value = S[key]; o.textContent = fmt(S[key]);
+    el.oninput = function () { S[key] = +el.value; o.textContent = fmt(S[key]); persist(); };
+  }
+  slider('pitch', 'pitch', 'pitchv', function (v) { return '(' + v.toFixed(2) + ')'; });
+  slider('rate', 'rate', 'ratev', function (v) { return '(' + v.toFixed(2) + ')'; });
+  slider('vpitch', 'vpitch', 'vpitchv', function (v) { return '(' + v.toFixed(2) + ')'; });
+  document.getElementById('voice').onchange = function () { S.voice = this.value; persist(); };
+  document.getElementById('addvoice').onclick = function () { if (!busy) document.getElementById('voicefile').click(); };
+  document.getElementById('voicefile').onchange = async function () {
+    var f = this.files && this.files[0]; this.value = ''; if (!f) return;
+    try { vbuf = await audioCtx().decodeAudioData(await f.arrayBuffer()); vname = f.name; }
+    catch (e) { alert('לא הצלחתי לקרוא את הקובץ הזה. נסו MP3 או M4A.'); return; }
+    document.getElementById('vname').textContent = '🎙 ' + vname + ' · ' + Math.round(vbuf.duration) + ' שניות'; document.getElementById('vfile').hidden = false;
+  };
+  document.getElementById('delvoice').onclick = function () { vbuf = null; document.getElementById('vfile').hidden = true; };
+
+  // ---------- start ----------
+  function fontsReady() {
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    var he = 'אבגדהוזחטיכלמנסעפצקרשתםןףךץ Het Pied Super Pastel 0123456789%×';
+    return Promise.race([Promise.all([document.fonts.load('900 100px "Frank Ruhl Libre"', 'Het? Super?'), document.fonts.load('600 50px Rubik', he), document.fonts.load('700 50px Rubik', he), document.fonts.load('800 50px Rubik', he), document.fonts.load('500 50px Rubik', he)]), sleep(5000)]).catch(function () {});
+  }
+  var q = new URLSearchParams(location.search);
+  Promise.all([loadImg('../genetics/logo.jpg').then(prep), fontsReady()]).then(function () {
+    renderTopics(); renderLines(); renderModes();
+    if (q.get('topic') && TOPICS[q.get('topic')]) S.topic = q.get('topic');
+    var fr = q.get('line');
+    if (fr != null) { // screenshot mode: ?line=2&talk=0.6
+      document.getElementById('app').hidden = true; document.body.classList.add('shot'); document.body.appendChild(cv); cv.style.width = W / 2 + 'px';
+      draw({ t: 3, i: +fr, lt: 3, cardT: 3, talk: +(q.get('talk') || 0) }); document.title = 'ready'; return;
+    }
+    stillFrame();
+  });
+})();
+</script>
+</body>
+</html>
