@@ -4330,7 +4330,7 @@ var qrcode = function() {
     h += alertsBox(snakeAlerts(s));
     h += waitingForHtml(s);
     var la = lastAte(s), ns = nextShed(s);
-    h += '<div class="spec">' + spec('תאריך בקיעה', s.hatch ? fmtDate(s.hatch) : '') + spec('משקל', s.weight ? s.weight + ' גרם' : '') + spec('מיקום', s.location) + spec('האכלה כל', s.feedEvery ? s.feedEvery + ' ימים' : '') +
+    h += '<div class="spec">' + spec('תאריך בקיעה', s.hatch ? fmtDate(s.hatch) : '') + spec('משקל', s.weight ? s.weight + ' גרם' : '') + spec('מיקום', s.location) +
       spec('אכל לאחרונה', la ? fmtDate(la.date) + ' (' + rel(daysSince(la.date)) + ')' + (preyText(la) ? ' · ' + preyText(la) : '') : '') +
       spec('שיל הבא (צפי)', ns ? fmtDate(ns.date) + ' (' + inDays(ns.date) + ') · בערך כל ' + ns.every + ' ימים' : '') +
       parentRow('אב', fa, s.fatherText) + parentRow('אם', mo, s.motherText) + spec('מחיר רכישה', Number(s.buyPrice) > 0 ? Number(s.buyPrice).toLocaleString('he-IL') + ' ₪' : '') +
