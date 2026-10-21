@@ -5456,19 +5456,22 @@ var qrcode = function() {
       '<button class="btn btn-primary wide" type="button" data-act="printlabels">הדפסה</button>' +
       '<p class="hint" style="margin-top:8px">מדביקים על קופסת ההטלה / האינקובטור. בחלון ההדפסה אפשר לבחור "שמירה כ-PDF".</p>';
   }
-  // A4: a grid of as many labels as fit (6 mm margins, 2 mm between labels; 10 per page at 90 x 51).
-  // Label printer: the page is exactly the label, no margins, one label per page.
+  // A4: a grid of as many labels as fit (2 mm between labels; 10 per page at 90 x 51). The iPhone ignores the page
+  // margins and keeps about 15 mm for its date / address lines, so a page that would not fit 176 x 250 mm is shrunk
+  // a little (90 x 51 prints about 5% smaller). Label printer: the page is exactly the label, one label per page.
   function printLabelPages(pa, labels, o) {
-    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], st = document.createElement('style'), cols = 1, per = 1;
+    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], st = document.createElement('style'), cols = 1, per = 1, zoom = 1;
     if (o.sheet === 'roll') st.textContent = '@media print { @page { size: ' + size[1] + 'mm ' + size[2] + 'mm; margin: 0; } }';
     else {
       st.textContent = '@media print { @page { size: A4; margin: 6mm; } }';
       cols = Math.max(1, Math.floor((198 + 2) / (size[1] + 2)));
-      per = cols * Math.max(1, Math.floor((285 + 2) / (size[2] + 2)));
+      var rows = Math.max(1, Math.floor((285 + 2) / (size[2] + 2)));
+      per = cols * rows;
+      zoom = Math.min(1, 176 / (cols * (size[1] + 2) - 2), 250 / (rows * (size[2] + 2) - 2));
     }
     document.head.appendChild(st);
     var html = '';
-    for (var i = 0; i < labels.length; i += per) html += '<div class="lblpage" style="grid-template-columns:repeat(' + cols + ',' + size[1] + 'mm)">' + labels.slice(i, i + per).join('') + '</div>';
+    for (var i = 0; i < labels.length; i += per) html += '<div class="lblpage" style="zoom:' + zoom.toFixed(3) + ';grid-template-columns:repeat(' + cols + ',' + size[1] + 'mm)">' + labels.slice(i, i + per).join('') + '</div>';
     pa.className = 'labels'; pa.innerHTML = html;
     window.addEventListener('afterprint', function done() { window.removeEventListener('afterprint', done); st.remove(); pa.className = ''; });
     try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
