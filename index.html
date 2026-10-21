@@ -450,7 +450,7 @@
 
   /* printable label (designed at 70 x 40 mm, scaled for other sizes) */
   #printArea { display: none; }
-  .lblwrap { flex: none; overflow: hidden; }
+  .lblwrap { flex: none; overflow: hidden; direction: ltr; } /* ltr: in the rtl page the label would sit on the right and the scale would push it out */
   .lbl { width: 70mm; height: 40mm; transform-origin: top left; background: #fff; color: #000; border: .3mm solid #000; border-radius: 2mm; padding: 2.2mm 2.6mm; display: flex; gap: 2.4mm; box-sizing: border-box; font-family: Heebo, Arial, sans-serif; direction: ltr; text-align: left; }
   .lbl .l-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
   .lbl .l-top { display: flex; align-items: center; justify-content: flex-start; gap: 2mm; border-bottom: .25mm solid #000; padding-bottom: 1.3mm; }
@@ -463,11 +463,13 @@
   .lbl .l-par b { font-weight: 800; font-size: 7.6pt; }
   .lbl .l-par .l-morph { margin-top: .2mm; font-size: 6.6pt; }
   .lbl .l-morph { font: 600 7pt/1.25 Heebo, Arial, sans-serif; margin-top: .8mm; }
+  .lbl .l-het { font: 600 7pt/1.25 Heebo, Arial, sans-serif; margin-top: .8mm; }
+  .lbl .l-par .l-het { margin-top: .2mm; font-size: 6.6pt; }
   .lbl .l-meta { font: 500 6.8pt/1.35 Heebo, Arial, sans-serif; }
   .lbl .l-side { width: 19mm; flex: none; align-self: center; display: flex; flex-direction: column; align-items: stretch; gap: 1.4mm; }
   .lbl .l-qr { width: 100%; }
   .lbl .l-qr svg { width: 100%; height: auto; display: block; }
-  .lblprev { background: #fff; border-radius: 12px; padding: 14px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; overflow-x: auto; }
+  .lblprev { background: #fff; border-radius: 12px; padding: 14px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: safe center; overflow-x: auto; }
   .lopts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin: 14px 0; }
   .lopts label { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
   .lopts input { width: 18px; height: 18px; accent-color: var(--accent); }
@@ -478,6 +480,9 @@
     #printArea { display: flex !important; flex-wrap: wrap; gap: 3mm; }
     .lbl { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { margin: 8mm; }
+    /* labels: one label per page, the page is the label itself (label printers / label rolls) */
+    #printArea.labels { display: block !important; }
+    #printArea.labels .lblwrap + .lblwrap { break-before: page; }
   }
 
   .toast { position: fixed; bottom: calc(84px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: .88rem; z-index: 100; max-width: 88vw; text-align: center; }
@@ -5366,22 +5371,32 @@ var qrcode = function() {
   function qrSvg(text) {
     try { var q = qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ scalable: true, margin: 0 }); } catch (e) { return ''; }
   }
+  // the label is designed at 70 mm wide and scaled; its height follows the chosen size (90 x 51 is a bit taller than 70 x 40),
+  // minus a hair so a label never spills onto a second page
+  function labelFrame(o, inner) {
+    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], k = size[1] / 70, h = size[2] - 0.3;
+    return '<div class="lblwrap" style="width:' + size[1] + 'mm;height:' + h + 'mm"><div class="lbl" style="height:' + (h / k).toFixed(2) + 'mm;transform:scale(' + k.toFixed(4) + ')">' + inner + '</div></div>';
+  }
+  // visual genes and hets apart: the hets go on their own line at the bottom
+  function splitHets(g) {
+    var re = /\bHet\b/i;
+    return [g.filter(function (x) { return !re.test(x); }), g.filter(function (x) { return re.test(x); })];
+  }
   function labelQr(s) { return qrSvg(APP_URL + '?s=' + encodeURIComponent(s.id)); }
   function labelHtml(s, o) {
     var mn = morphNames(s.genes), fa = snakeById(s.fatherId), mo = snakeById(s.motherId);
     var sire = fa ? sname(fa) : (s.fatherText || ''), dam = mo ? sname(mo) : (s.motherText || '');
-    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], k = size[1] / 70;
-    var meta = [];
+    var gs = splitHets(s.genes || []), meta = [];
     if (o.hatch && s.hatch) meta.push('Hatch ' + fmtDate(s.hatch));
     if (o.weight && s.weight) meta.push(s.weight + ' g');
     var par = o.parents && (sire || dam) ? 'Sire ' + esc(sire || '?') + ' · Dam ' + esc(dam || '?') : '';
-    return '<div class="lblwrap" style="width:' + size[1] + 'mm;height:' + size[2] + 'mm"><div class="lbl" style="transform:scale(' + k.toFixed(4) + ')">' +
-      '<div class="l-main"><div class="l-top">' +
+    return labelFrame(o, '<div class="l-main"><div class="l-top">' +
       '<span class="l-id">' + esc(s.code) + (o.sex && sexSym(s.sex) ? '<span class="l-sex">' + sexSym(s.sex) + '</span>' : '') + '</span></div>' +
-      '<div class="l-body">' + (o.genes && (s.genes || []).length ? '<div class="l-genes">' + esc((s.genes || []).join(' × ')) + '</div>' : '') +
-      (o.morph && mn.length ? '<div class="l-morph">= ' + esc(mn.join(', ')) + '</div>' : '') + '</div>' +
+      '<div class="l-body">' + (o.genes && gs[0].length ? '<div class="l-genes">' + esc(gs[0].join(' × ')) + '</div>' : '') +
+      (o.morph && mn.length ? '<div class="l-morph">= ' + esc(mn.join(', ')) + '</div>' : '') +
+      (o.genes && gs[1].length ? '<div class="l-het">' + esc(gs[1].join(' × ')) + '</div>' : '') + '</div>' +
       '<div class="l-meta">' + (meta.length ? '<div>' + esc(meta.join(' · ')) + '</div>' : '') + (par ? '<div>' + par + '</div>' : '') + '</div></div>' +
-      (o.qr || o.logo ? '<div class="l-side">' + (o.qr ? '<div class="l-qr">' + labelQr(s) + '</div>' : '') + (o.logo ? '<img class="l-logo" src="' + LOGO + '" alt="">' : '') + '</div>' : '') + '</div></div>';
+      (o.qr || o.logo ? '<div class="l-side">' + (o.qr ? '<div class="l-qr">' + labelQr(s) + '</div>' : '') + (o.logo ? '<img class="l-logo" src="' + LOGO + '" alt="">' : '') + '</div>' : ''));
   }
   function labelSheetHtml() {
     var ids = (ui.sheet.ids || []).filter(function (id) { return snakeById(id); }), o = labelOpts();
@@ -5406,22 +5421,22 @@ var qrcode = function() {
   var PAIR_LABEL_FIELDS = [['logo', 'לוגו'], ['genes', 'גנטיקה'], ['morph', 'שם מורף'], ['dates', 'תאריכים'], ['eggs', 'מספר ביצים'], ['qr', 'קוד QR']];
   function pairLabelQr(p) { return qrSvg(APP_URL + '?p=' + encodeURIComponent(p.id)); }
   function pairLabelHtml(p, o) {
-    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], k = size[1] / 70, eh = expectedHatch(p);
+    var eh = expectedHatch(p);
     function parent(s, sym) {
-      var g = s ? s.genes || [] : [], mn = s ? morphNames(g) : [];
-      var txt = o.genes && g.length ? g.join(' × ') : (o.genes && s ? 'Normal' : '');
+      var g = s ? s.genes || [] : [], mn = s ? morphNames(g) : [], gs = splitHets(g);
+      var txt = o.genes && gs[0].length ? gs[0].join(' × ') : (o.genes && s ? 'Normal' : '');
       return '<div class="l-par"><b>' + sym + ' ' + esc(s ? sname(s) : '?') + '</b>' + (txt ? ' ' + esc(txt) : '') +
-        (o.morph && mn.length ? '<div class="l-morph">= ' + esc(mn.join(', ')) + '</div>' : '') + '</div>';
+        (o.morph && mn.length ? '<div class="l-morph">= ' + esc(mn.join(', ')) + '</div>' : '') +
+        (o.genes && gs[1].length ? '<div class="l-het">' + esc(gs[1].join(' × ')) + '</div>' : '') + '</div>';
     }
     var meta = [];
     if (o.dates && p.laid) meta.push('Laid ' + fmtDate(p.laid));
     if (o.eggs && p.eggs) meta.push(p.eggs + ' eggs');
     if (o.dates && eh) meta.push('Due ' + fmtDate(eh));
-    return '<div class="lblwrap" style="width:' + size[1] + 'mm;height:' + size[2] + 'mm"><div class="lbl" style="transform:scale(' + k.toFixed(4) + ')">' +
-      '<div class="l-main"><div class="l-top"><span class="l-id">CLUTCH' + (p.season ? ' ' + esc(p.season) : '') + '</span></div>' +
+    return labelFrame(o, '<div class="l-main"><div class="l-top"><span class="l-id">CLUTCH' + (p.season ? ' ' + esc(p.season) : '') + '</span></div>' +
       '<div class="l-body">' + parent(snakeById(p.maleId), '♂') + parent(snakeById(p.femaleId), '♀') + '</div>' +
       '<div class="l-meta">' + (meta.length ? '<div>' + esc(meta.join(' · ')) + '</div>' : '') + '</div></div>' +
-      (o.qr || o.logo ? '<div class="l-side">' + (o.qr ? '<div class="l-qr">' + pairLabelQr(p) + '</div>' : '') + (o.logo ? '<img class="l-logo" src="' + LOGO + '" alt="">' : '') + '</div>' : '') + '</div></div>';
+      (o.qr || o.logo ? '<div class="l-side">' + (o.qr ? '<div class="l-qr">' + pairLabelQr(p) + '</div>' : '') + (o.logo ? '<img class="l-logo" src="' + LOGO + '" alt="">' : '') + '</div>' : ''));
   }
   function pairLabelSheetHtml() {
     var p = pairOf(ui.sheet.pid), o = labelOpts();
@@ -5435,18 +5450,25 @@ var qrcode = function() {
       '<button class="btn btn-primary wide" type="button" data-act="printlabels">הדפסה</button>' +
       '<p class="hint" style="margin-top:8px">מדביקים על קופסת ההטלה / האינקובטור. בחלון ההדפסה אפשר לבחור "שמירה כ-PDF".</p>';
   }
+  // the print page is exactly the label size with no margins, one label per page
+  function printLabelPages(pa, html, o) {
+    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], st = document.createElement('style');
+    st.textContent = '@media print { @page { size: ' + size[1] + 'mm ' + size[2] + 'mm; margin: 0; } }';
+    document.head.appendChild(st);
+    pa.className = 'labels'; pa.innerHTML = html;
+    window.addEventListener('afterprint', function done() { window.removeEventListener('afterprint', done); st.remove(); pa.className = ''; });
+    try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
+  }
   function printLabels() {
-    var pa = document.getElementById('printArea');
+    var pa = document.getElementById('printArea'), o = labelOpts();
     if (ui.sheet && ui.sheet.type === 'pairlabel') {
       var p = pairOf(ui.sheet.pid); if (!p || !pa) return;
-      pa.innerHTML = pairLabelHtml(p, labelOpts());
-      try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
+      printLabelPages(pa, pairLabelHtml(p, o), o);
       return;
     }
-    var ids = (ui.sheet && ui.sheet.ids || []).filter(function (id) { return snakeById(id); }), o = labelOpts();
+    var ids = (ui.sheet && ui.sheet.ids || []).filter(function (id) { return snakeById(id); });
     if (!ids.length || !pa) return;
-    pa.innerHTML = ids.map(function (id) { return labelHtml(snakeById(id), o); }).join('');
-    try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
+    printLabelPages(pa, ids.map(function (id) { return labelHtml(snakeById(id), o); }).join(''), o);
   }
 
   /* ---------- for-sale catalog: every snake marked "for sale", shown the way a customer should see it ---------- */
