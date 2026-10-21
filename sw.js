@@ -1,5 +1,5 @@
 // RIL Ball Pythons: keeps the app on the phone so it opens with no internet (snake rooms often have no signal).
-// Pages: network first, so updates arrive as soon as there is a connection; the saved copy is used when offline.
+// Pages: network first (skipping the browser's HTTP cache), so updates arrive as soon as there is a connection; the saved copy is used when offline.
 // Libraries and fonts: the saved copy first. Firebase's own data calls are never touched here.
 var CACHE = 'ril-v1';
 var CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
@@ -30,7 +30,8 @@ self.addEventListener('fetch', function (e) {
     }));
     return;
   }
-  e.respondWith(fetch(req).then(function (res) {
+  // no-cache: always ask the server for the newest page (the site lets browsers keep a copy for 10 minutes)
+  e.respondWith(fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(function (res) {
     if (res && res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
     return res;
   }).catch(function () {

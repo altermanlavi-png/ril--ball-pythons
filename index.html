@@ -5377,9 +5377,10 @@ var qrcode = function() {
   }
   // the label is designed at 70 mm wide and scaled; its height follows the chosen size (90 x 51 is a bit taller than 70 x 40),
   // minus a hair so a label never spills onto a second page
+  var labelFit = 1; // < 1 while printing an A4 page that has to shrink to fit the iPhone's margins
   function labelFrame(o, inner) {
-    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], k = size[1] / 70, h = size[2] - 0.3;
-    return '<div class="lblwrap" style="width:' + size[1] + 'mm;height:' + h + 'mm"><div class="lbl" style="height:' + (h / k).toFixed(2) + 'mm;transform:scale(' + k.toFixed(4) + ')">' + inner + '</div></div>';
+    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], w = size[1] * labelFit, k = w / 70, h = (size[2] - 0.3) * labelFit;
+    return '<div class="lblwrap" style="width:' + w.toFixed(2) + 'mm;height:' + h.toFixed(2) + 'mm"><div class="lbl" style="height:' + (h / k).toFixed(2) + 'mm;transform:scale(' + k.toFixed(4) + ')">' + inner + '</div></div>';
   }
   // visual genes and hets apart: the hets go on their own line at the bottom
   function splitHets(g) {
@@ -5459,7 +5460,7 @@ var qrcode = function() {
   // A4: a grid of as many labels as fit (2 mm between labels; 10 per page at 90 x 51). The iPhone ignores the page
   // margins and keeps about 15 mm for its date / address lines, so a page that would not fit 176 x 250 mm is shrunk
   // a little (90 x 51 prints about 5% smaller). Label printer: the page is exactly the label, one label per page.
-  function printLabelPages(pa, labels, o) {
+  function printLabelPages(pa, build, o) {
     var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], st = document.createElement('style'), cols = 1, per = 1, zoom = 1;
     if (o.sheet === 'roll') st.textContent = '@media print { @page { size: ' + size[1] + 'mm ' + size[2] + 'mm; margin: 0; } }';
     else {
@@ -5470,8 +5471,9 @@ var qrcode = function() {
       zoom = Math.min(1, 176 / (cols * (size[1] + 2) - 2), 250 / (rows * (size[2] + 2) - 2));
     }
     document.head.appendChild(st);
+    labelFit = zoom; var labels = build(); labelFit = 1;
     var html = '';
-    for (var i = 0; i < labels.length; i += per) html += '<div class="lblpage" style="zoom:' + zoom.toFixed(3) + ';grid-template-columns:repeat(' + cols + ',' + size[1] + 'mm)">' + labels.slice(i, i + per).join('') + '</div>';
+    for (var i = 0; i < labels.length; i += per) html += '<div class="lblpage" style="gap:' + (2 * zoom).toFixed(2) + 'mm;grid-template-columns:repeat(' + cols + ',' + (size[1] * zoom).toFixed(2) + 'mm)">' + labels.slice(i, i + per).join('') + '</div>';
     pa.className = 'labels'; pa.innerHTML = html;
     window.addEventListener('afterprint', function done() { window.removeEventListener('afterprint', done); st.remove(); pa.className = ''; });
     try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
@@ -5480,12 +5482,12 @@ var qrcode = function() {
     var pa = document.getElementById('printArea'), o = labelOpts();
     if (ui.sheet && ui.sheet.type === 'pairlabel') {
       var p = pairOf(ui.sheet.pid); if (!p || !pa) return;
-      printLabelPages(pa, [pairLabelHtml(p, o)], o);
+      printLabelPages(pa, function () { return [pairLabelHtml(p, o)]; }, o);
       return;
     }
     var ids = (ui.sheet && ui.sheet.ids || []).filter(function (id) { return snakeById(id); });
     if (!ids.length || !pa) return;
-    printLabelPages(pa, ids.map(function (id) { return labelHtml(snakeById(id), o); }), o);
+    printLabelPages(pa, function () { return ids.map(function (id) { return labelHtml(snakeById(id), o); }); }, o);
   }
 
   /* ---------- for-sale catalog: every snake marked "for sale", shown the way a customer should see it ---------- */
