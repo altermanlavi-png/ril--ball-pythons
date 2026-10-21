@@ -3824,7 +3824,7 @@ var qrcode = function() {
         '<div class="spec-row"><span>מייל</span><span dir="ltr">' + esc(cloud.email || '') + '</span></div>' +
         '<div class="spec-row"><span>נחשים באוסף</span><span>' + db.snakes.length + '</span></div>' +
         '<div class="spec-row"><span>סנכרון</span><span>' + (cloud.on ? (cloud.error ? 'בעיה, נשמר במכשיר' : 'פעיל') : 'לא מחובר') + '</span></div>' +
-        '<div class="row" style="margin-top:14px"><button class="btn btn-soft" type="button" data-act="accounts">החלפת משתמש</button><button class="btn btn-soft" type="button" data-act="fblogout">התנתקות</button></div></div>';
+        '<div class="row" style="margin-top:14px"><button class="btn btn-soft" type="button" data-act="export">שמירת גיבוי לקובץ (JSON)</button><button class="btn btn-soft" type="button" data-act="accounts">החלפת משתמש</button><button class="btn btn-soft" type="button" data-act="fblogout">התנתקות</button></div></div>';
       if (location.hash === '#import') h += '<div class="section"><div class="section-head"><h2 class="section-title">טעינת גיבוי</h2></div><div class="row"><button class="btn btn-soft" type="button" data-act="import">טעינת גיבוי</button></div></div>';
     } else if (window.claude) {
       h += '<div class="section"><div class="section-head"><h2 class="section-title">האוסף</h2></div><div class="spec-row"><span>נחשים באוסף</span><span>' + db.snakes.length + '</span></div></div>';
