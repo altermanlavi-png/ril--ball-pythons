@@ -480,9 +480,10 @@
     #printArea { display: flex !important; flex-wrap: wrap; gap: 3mm; }
     .lbl { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { margin: 8mm; }
-    /* labels: one label per page, the page is the label itself (label printers / label rolls) */
+    /* labels: as many as fit on an A4 page, or one per page when the page is the label itself (label printer) */
     #printArea.labels { display: block !important; }
-    #printArea.labels .lblwrap + .lblwrap { break-before: page; }
+    #printArea.labels .lblpage { display: grid; gap: 2mm; justify-content: center; }
+    #printArea.labels .lblpage + .lblpage { break-before: page; }
   }
 
   .toast { position: fixed; bottom: calc(84px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: .88rem; z-index: 100; max-width: 88vw; text-align: center; }
@@ -5362,8 +5363,11 @@ var qrcode = function() {
   /* ---------- printable labels ---------- */
   var LABEL_SIZES = [['56 × 32 מ״מ', 56, 32], ['70 × 40 מ״מ', 70, 40], ['90 × 51 מ״מ', 90, 51]];
   var LABEL_FIELDS = [['logo', 'לוגו'], ['sex', 'מין'], ['genes', 'גנטיקה'], ['morph', 'שם מורף'], ['hatch', 'תאריך בקיעה'], ['parents', 'הורים'], ['weight', 'משקל'], ['qr', 'קוד QR']];
+  function labelSheetSelect(o) {
+    return '<label class="field">הדפסה על<select data-lopt="sheet"><option value="a4"' + (o.sheet !== 'roll' ? ' selected' : '') + '>דף A4, כמה שנכנס בדף</option><option value="roll"' + (o.sheet === 'roll' ? ' selected' : '') + '>מדפסת מדבקות, תווית בכל דף</option></select></label>';
+  }
   function labelOpts() {
-    db.labelOpts = Object.assign({ size: 1, logo: true, sex: true, genes: true, morph: true, hatch: true, parents: false, weight: false, qr: true }, db.labelOpts || {});
+    db.labelOpts = Object.assign({ size: 1, sheet: 'a4', logo: true, sex: true, genes: true, morph: true, hatch: true, parents: false, weight: false, qr: true }, db.labelOpts || {});
     return db.labelOpts;
   }
   // the QR on a label is a link that opens this snake (or pairing) in the app
@@ -5404,6 +5408,7 @@ var qrcode = function() {
       '<h2 class="sheet-title">תווית להדפסה' + (ids.length > 1 ? ' — ' + ids.length + ' נחשים' : '') + '</h2>' +
       '<div class="lblprev" id="lblPreview">' + labelPreviewInner(ids, o) + '</div>' +
       '<label class="field" style="margin-top:14px">גודל התווית<select data-lopt="size">' + LABEL_SIZES.map(function (z, i) { return '<option value="' + i + '"' + (o.size === i ? ' selected' : '') + '>' + z[0] + '</option>'; }).join('') + '</select></label>' +
+      labelSheetSelect(o) +
       '<div class="lopts">' + LABEL_FIELDS.map(function (x) { return '<label><input type="checkbox" data-lopt="' + x[0] + '"' + (o[x[0]] ? ' checked' : '') + '>' + x[1] + '</label>'; }).join('') + '</div>' +
       '<button class="btn btn-primary wide" type="button" data-act="printlabels">הדפסה' + (ids.length > 1 ? ' (' + ids.length + ')' : '') + '</button>' +
       '<p class="hint" style="margin-top:8px">בחלון ההדפסה אפשר לבחור "שמירה כ-PDF". התוויות מודפסות בשחור על לבן, ובגודל שנבחר.</p>';
@@ -5446,15 +5451,24 @@ var qrcode = function() {
       '<h2 class="sheet-title">תווית לקופסת הטלה</h2>' +
       '<div class="lblprev" id="lblPreview">' + pairLabelHtml(p, o) + '</div>' +
       '<label class="field" style="margin-top:14px">גודל התווית<select data-lopt="size">' + LABEL_SIZES.map(function (z, i) { return '<option value="' + i + '"' + (o.size === i ? ' selected' : '') + '>' + z[0] + '</option>'; }).join('') + '</select></label>' +
+      labelSheetSelect(o) +
       '<div class="lopts">' + PAIR_LABEL_FIELDS.map(function (x) { return '<label><input type="checkbox" data-lopt="' + x[0] + '"' + (o[x[0]] ? ' checked' : '') + '>' + x[1] + '</label>'; }).join('') + '</div>' +
       '<button class="btn btn-primary wide" type="button" data-act="printlabels">הדפסה</button>' +
       '<p class="hint" style="margin-top:8px">מדביקים על קופסת ההטלה / האינקובטור. בחלון ההדפסה אפשר לבחור "שמירה כ-PDF".</p>';
   }
-  // the print page is exactly the label size with no margins, one label per page
-  function printLabelPages(pa, html, o) {
-    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], st = document.createElement('style');
-    st.textContent = '@media print { @page { size: ' + size[1] + 'mm ' + size[2] + 'mm; margin: 0; } }';
+  // A4: a grid of as many labels as fit (6 mm margins, 2 mm between labels; 10 per page at 90 x 51).
+  // Label printer: the page is exactly the label, no margins, one label per page.
+  function printLabelPages(pa, labels, o) {
+    var size = LABEL_SIZES[o.size] || LABEL_SIZES[1], st = document.createElement('style'), cols = 1, per = 1;
+    if (o.sheet === 'roll') st.textContent = '@media print { @page { size: ' + size[1] + 'mm ' + size[2] + 'mm; margin: 0; } }';
+    else {
+      st.textContent = '@media print { @page { size: A4; margin: 6mm; } }';
+      cols = Math.max(1, Math.floor((198 + 2) / (size[1] + 2)));
+      per = cols * Math.max(1, Math.floor((285 + 2) / (size[2] + 2)));
+    }
     document.head.appendChild(st);
+    var html = '';
+    for (var i = 0; i < labels.length; i += per) html += '<div class="lblpage" style="grid-template-columns:repeat(' + cols + ',' + size[1] + 'mm)">' + labels.slice(i, i + per).join('') + '</div>';
     pa.className = 'labels'; pa.innerHTML = html;
     window.addEventListener('afterprint', function done() { window.removeEventListener('afterprint', done); st.remove(); pa.className = ''; });
     try { window.print(); } catch (e) { toast('ההדפסה אינה זמינה כאן'); }
@@ -5463,12 +5477,12 @@ var qrcode = function() {
     var pa = document.getElementById('printArea'), o = labelOpts();
     if (ui.sheet && ui.sheet.type === 'pairlabel') {
       var p = pairOf(ui.sheet.pid); if (!p || !pa) return;
-      printLabelPages(pa, pairLabelHtml(p, o), o);
+      printLabelPages(pa, [pairLabelHtml(p, o)], o);
       return;
     }
     var ids = (ui.sheet && ui.sheet.ids || []).filter(function (id) { return snakeById(id); });
     if (!ids.length || !pa) return;
-    printLabelPages(pa, ids.map(function (id) { return labelHtml(snakeById(id), o); }).join(''), o);
+    printLabelPages(pa, ids.map(function (id) { return labelHtml(snakeById(id), o); }), o);
   }
 
   /* ---------- for-sale catalog: every snake marked "for sale", shown the way a customer should see it ---------- */
